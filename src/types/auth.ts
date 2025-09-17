@@ -10,6 +10,7 @@ export interface User extends SupabaseUser {
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  isEmailConfirmed: boolean;
   isLoading: boolean;
   error: string | null;
 }
@@ -19,6 +20,7 @@ export interface AuthContextType extends AuthState {
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  resendConfirmationEmail: (email: string) => Promise<void>;
   clearError: () => void;
 }
 
