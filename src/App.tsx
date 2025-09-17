@@ -2,11 +2,14 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './contexts/AuthContext';
+import ErrorBoundary from './components/molecules/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import ProductPage from './pages/ProductPage';
 import DashboardPage from './pages/DashboardPage';
 import AccountPage from './pages/AccountPage';
 import BillingPage from './pages/BillingPage';
+import NotFoundPage from './pages/NotFoundPage';
+import ErrorPage from './pages/ErrorPage';
 import { updateSEO, defaultSEO } from './utils/seo';
 import { analytics, trackPageView } from './utils/analytics';
 
@@ -37,6 +40,14 @@ const RouteHandler: React.FC = () => {
         title: 'Billing & Plans - Parscade',
         description: 'Choose the perfect plan for your document processing needs. Simple, transparent pricing with no hidden fees.',
       },
+      '/404': {
+        title: 'Page Not Found - Parscade',
+        description: 'The page you\'re looking for doesn\'t exist.',
+      },
+      '/error': {
+        title: 'Error - Parscade',
+        description: 'An unexpected error occurred.',
+      },
     };
 
     const currentRoute = routeSEO[location.pathname as keyof typeof routeSEO];
@@ -58,6 +69,9 @@ const RouteHandler: React.FC = () => {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/account" element={<AccountPage />} />
         <Route path="/billing" element={<BillingPage />} />
+        <Route path="/404" element={<NotFoundPage />} />
+        <Route path="/error" element={<ErrorPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </AnimatePresence>
   );
@@ -70,11 +84,13 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <AuthProvider>
-      <Router>
-        <RouteHandler />
-      </Router>
-    </AuthProvider>
+    <ErrorBoundary fallback={<ErrorPage />}>
+      <AuthProvider>
+        <Router>
+          <RouteHandler />
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 };
 

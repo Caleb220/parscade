@@ -1,7 +1,8 @@
 import React, { ButtonHTMLAttributes, forwardRef } from 'react';
 import { motion, HTMLMotionProps } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
-interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className'> {
+interface BaseButtonProps {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg' | 'xl';
   isLoading?: boolean;
@@ -9,9 +10,26 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'cla
   rightIcon?: React.ReactNode;
   fullWidth?: boolean;
   className?: string;
+  as?: 'button' | typeof Link;
+  to?: string;
 }
 
-const Button = forwardRef<HTMLButtonElement, ButtonProps & HTMLMotionProps<'button'>>(
+type ButtonProps = BaseButtonProps & 
+  (BaseButtonProps['as'] extends typeof Link 
+    ? { to: string } 
+    : Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className'>
+  );
+
+interface ButtonAsLinkProps extends BaseButtonProps {
+  as: typeof Link;
+  to: string;
+}
+
+interface ButtonAsButtonProps extends BaseButtonProps, Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className'> {
+  as?: 'button';
+}
+
+const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, (ButtonAsButtonProps | ButtonAsLinkProps) & HTMLMotionProps<'button'>>(
   (
     {
       variant = 'primary',
@@ -23,6 +41,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps & HTMLMotionProps<'butt
       children,
       disabled,
       className = '',
+      as: Component = 'button',
+      to,
       ...props
     },
     ref
@@ -52,15 +72,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps & HTMLMotionProps<'butt
       className,
     ].join(' ');
 
-    return (
-      <motion.button
-        ref={ref}
-        className={classes}
-        disabled={disabled || isLoading}
-        whileHover={{ scale: disabled || isLoading ? 1 : 1.02 }}
-        whileTap={{ scale: disabled || isLoading ? 1 : 0.98 }}
-        {...props}
-      >
+    const content = (
+      <>
         {isLoading ? (
           <div className="flex items-center">
             <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
@@ -87,6 +100,37 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps & HTMLMotionProps<'butt
             {rightIcon && <span className="ml-2">{rightIcon}</span>}
           </>
         )}
+      </>
+    );
+
+    if (Component === Link && to) {
+      return (
+        <motion.div
+          whileHover={{ scale: disabled || isLoading ? 1 : 1.02 }}
+          whileTap={{ scale: disabled || isLoading ? 1 : 0.98 }}
+        >
+          <Link
+            ref={ref as React.Ref<HTMLAnchorElement>}
+            to={to}
+            className={classes}
+            {...(props as any)}
+          >
+            {content}
+          </Link>
+        </motion.div>
+      );
+    }
+
+    return (
+      <motion.button
+        ref={ref as React.Ref<HTMLButtonElement>}
+        className={classes}
+        disabled={disabled || isLoading}
+        whileHover={{ scale: disabled || isLoading ? 1 : 1.02 }}
+        whileTap={{ scale: disabled || isLoading ? 1 : 0.98 }}
+        {...(props as ButtonHTMLAttributes<HTMLButtonElement>)}
+      >
+        {content}
       </motion.button>
     );
   }

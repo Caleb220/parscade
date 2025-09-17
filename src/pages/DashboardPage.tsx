@@ -6,6 +6,7 @@ import Button from '../components/atoms/Button';
 import LoadingSpinner from '../components/atoms/LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from '../components/organisms/AuthModal';
+import AuthLoadingSkeleton from '../components/molecules/AuthLoadingSkeleton';
 
 const DashboardPage: React.FC = () => {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -20,14 +21,7 @@ const DashboardPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Layout>
-        <div className="bg-gray-50 min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <LoadingSpinner size="lg" />
-            <p className="mt-4 text-gray-600">Loading your dashboard...</p>
-          </div>
-        </div>
-      </Layout>
+      <AuthLoadingSkeleton />
     );
   }
 

@@ -6,6 +6,7 @@ import Button from '../components/atoms/Button';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from '../components/organisms/AuthModal';
 import LoadingSpinner from '../components/atoms/LoadingSpinner';
+import AuthLoadingSkeleton from '../components/molecules/AuthLoadingSkeleton';
 
 const AccountPage: React.FC = () => {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -20,14 +21,7 @@ const AccountPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Layout>
-        <div className="bg-gray-50 min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <LoadingSpinner size="lg" />
-            <p className="mt-4 text-gray-600">Loading your account...</p>
-          </div>
-        </div>
-      </Layout>
+      <AuthLoadingSkeleton />
     );
   }
 
