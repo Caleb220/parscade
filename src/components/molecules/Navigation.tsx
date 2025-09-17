@@ -59,15 +59,11 @@ const Navigation: React.FC = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center">
             <motion.div
-              className="text-2xl font-bold text-gray-900 tracking-tight"
+              className="text-3xl font-black text-gray-900"
               style={{
-                fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-                fontWeight: 800,
-                letterSpacing: '-0.02em',
-                background: 'linear-gradient(135deg, #1e40af 0%, #7c3aed 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
+                fontFamily: "'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+                fontWeight: 900,
+                letterSpacing: '-0.01em',
               }}
               whileHover={{ scale: 1.05 }}
               transition={{ type: 'spring', stiffness: 400, damping: 10 }}

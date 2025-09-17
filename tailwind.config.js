@@ -16,6 +16,14 @@ export default {
           'sans-serif',
         ],
         display: [
+          'Poppins',
+          'Inter',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'sans-serif',
+        ],
+        logo: [
+          'Poppins',
           'Inter',
           '-apple-system',
           'BlinkMacSystemFont',

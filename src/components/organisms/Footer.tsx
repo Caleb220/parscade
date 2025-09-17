@@ -47,15 +47,11 @@ const Footer: React.FC = () => {
           <div className="lg:col-span-2">
             <Link 
               to="/" 
-              className="text-2xl font-bold mb-4 block"
+              className="text-3xl font-black text-white mb-4 block"
               style={{
-                fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-                fontWeight: 800,
-                letterSpacing: '-0.02em',
-                background: 'linear-gradient(135deg, #ffffff 0%, #e5e7eb 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
+                fontFamily: "'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+                fontWeight: 900,
+                letterSpacing: '-0.01em',
               }}
             >
               Parscade
