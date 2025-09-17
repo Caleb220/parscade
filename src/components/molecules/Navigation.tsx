@@ -58,6 +58,13 @@ const Navigation: React.FC = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center">
+            <motion.img
+              src="/main-logo.png"
+              alt="Parscade Logo"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-full mr-2 sm:mr-3"
+              whileHover={{ scale: 1.05 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 10 }}
+            />
             <motion.div
               className="text-3xl font-black text-gray-900"
               style={{

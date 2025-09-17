@@ -46,11 +46,15 @@ const Footer: React.FC = () => {
               className="text-2xl sm:text-3xl font-black text-white mb-4 block"
               style={{
                 fontFamily: "'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-                fontWeight: 900,
-                letterSpacing: '-0.01em',
-              }}
-            >
-              Parscade
+            <Link to="/" className="flex items-center mb-4">
+              <img
+                src="/main-logo.png"
+                alt="Parscade Logo"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full mr-2 sm:mr-3 bg-white/10 p-1"
+              />
+              <span className="text-2xl sm:text-3xl font-black text-white logo-text-light">
+                Parscade
+              </span>
             </Link>
             <p className="text-gray-400 mb-6 max-w-md text-sm sm:text-base">
               Transform unstructured documents into structured data with our intelligent parsing platform.

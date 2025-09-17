@@ -56,7 +56,7 @@ export const updateSEO = (config: SEOConfig): void => {
 };
 
 export const defaultSEO: SEOConfig = {
-  title: 'Parscade - Next-Generation Document Processing Platform',
+  title: 'Parscade',
   description: 'Join our beta program and help build the future of document processing. Intelligent parsing platform designed for enterprise-grade accuracy and speed.',
   keywords: [
     'document parsing',
@@ -69,5 +69,6 @@ export const defaultSEO: SEOConfig = {
     'beta program',
     'startup'
   ],
+  image: '/main-logo.png',
   type: 'website'
 };

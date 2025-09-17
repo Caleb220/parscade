@@ -73,6 +73,20 @@
     letter-spacing: -0.01em;
   }
   
+  /* Logo image optimization */
+  .logo-image {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+  }
+  
+  /* High DPI display support */
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .logo-image {
+      image-rendering: auto;
+    }
+  }
+  
   /* Glass morphism effect */
   .glass {
     background: rgba(255, 255, 255, 0.1);
