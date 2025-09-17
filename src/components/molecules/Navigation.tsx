@@ -11,13 +11,15 @@ interface NavigationItem {
   label: string;
   href: string;
   children?: NavigationItem[];
+  requiresAuth?: boolean;
 }
 
 const navigationItems: NavigationItem[] = [
   { label: 'Product', href: '/product' },
-  { label: 'Dashboard', href: '/dashboard' },
-  { label: 'Account', href: '/account' },
+  { label: 'Dashboard', href: '/dashboard', requiresAuth: true },
+  { label: 'Account', href: '/account', requiresAuth: true },
   { label: 'Billing', href: '/billing' },
+  { label: 'Contact', href: '/contact' },
 ];
 
 const Navigation: React.FC = () => {
@@ -27,6 +29,11 @@ const Navigation: React.FC = () => {
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const location = useLocation();
   const { isAuthenticated, isLoading } = useAuth();
+
+  // Filter navigation items based on authentication status
+  const visibleNavigationItems = navigationItems.filter(item => 
+    !item.requiresAuth || isAuthenticated
+  );
 
   const isActive = (href: string): boolean => {
     return location.pathname === href;
@@ -62,7 +69,7 @@ const Navigation: React.FC = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            {navigationItems.map((item) => (
+            {visibleNavigationItems.map((item) => (
               <div key={item.label} className="relative">
                 {item.children ? (
                   <div>
@@ -162,7 +169,7 @@ const Navigation: React.FC = () => {
             className="md:hidden bg-white border-t border-gray-200"
           >
             <div className="px-4 py-2 space-y-1">
-              {navigationItems.map((item) => (
+              {visibleNavigationItems.map((item) => (
                 <Link
                   key={item.href}
                   to={item.href}
