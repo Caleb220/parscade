@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CreditCard, Check, Zap, Star, Shield } from 'lucide-react';
 import Layout from '../components/templates/Layout';
 import Button from '../components/atoms/Button';
 
 const BillingPage: React.FC = () => {
+  const [isAnnual, setIsAnnual] = useState(false);
+
   const plans = [
     {
       name: 'Starter',
-      price: '$29',
+      monthlyPrice: 29,
+      annualPrice: 23, // 20% discount
       period: '/month',
       description: 'Perfect for small teams getting started with document processing',
       features: [
@@ -22,7 +25,8 @@ const BillingPage: React.FC = () => {
     },
     {
       name: 'Professional',
-      price: '$99',
+      monthlyPrice: 99,
+      annualPrice: 79, // 20% discount
       period: '/month',
       description: 'Advanced features for growing businesses and teams',
       features: [
@@ -38,7 +42,8 @@ const BillingPage: React.FC = () => {
     },
     {
       name: 'Enterprise',
-      price: 'Custom',
+      monthlyPrice: null,
+      annualPrice: null,
       period: '',
       description: 'Tailored solutions for large organizations',
       features: [
@@ -82,11 +87,25 @@ const BillingPage: React.FC = () => {
             </p>
             
             {/* Billing Toggle */}
-            <div className="inline-flex items-center bg-gray-100 rounded-lg p-1">
-              <button className="px-4 py-2 text-sm font-medium text-gray-900 bg-white rounded-md shadow-sm">
+            <div className="inline-flex items-center bg-gray-100 rounded-lg p-1 mb-8">
+              <button 
+                onClick={() => setIsAnnual(false)}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
+                  !isAnnual 
+                    ? 'text-gray-900 bg-white shadow-sm' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
                 Monthly
               </button>
-              <button className="px-4 py-2 text-sm font-medium text-gray-600">
+              <button 
+                onClick={() => setIsAnnual(true)}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
+                  isAnnual 
+                    ? 'text-gray-900 bg-white shadow-sm' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
                 Annual
                 <span className="ml-1 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
                   Save 20%
@@ -121,7 +140,13 @@ const BillingPage: React.FC = () => {
                 <div className="text-center mb-8">
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">{plan.name}</h3>
                   <div className="flex items-baseline justify-center mb-4">
-                    <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
+                    <span className="text-4xl font-bold text-gray-900">
+                      {plan.monthlyPrice ? (
+                        `$${isAnnual ? plan.annualPrice : plan.monthlyPrice}`
+                      ) : (
+                        'Custom'
+                      )}
+                    </span>
                     <span className="text-gray-600 ml-1">{plan.period}</span>
                   </div>
                   <p className="text-gray-600">{plan.description}</p>
@@ -136,14 +161,16 @@ const BillingPage: React.FC = () => {
                   ))}
                 </ul>
 
-                <Button
-                  variant={plan.popular ? 'primary' : 'outline'}
-                  size="lg"
-                  fullWidth
-                  disabled
-                >
-                  {plan.name === 'Enterprise' ? 'Contact Sales' : 'Coming Soon'}
-                </Button>
+                <div className="mt-auto">
+                  <Button
+                    variant={plan.popular ? 'primary' : 'outline'}
+                    size="lg"
+                    fullWidth
+                    disabled
+                  >
+                    {plan.name === 'Enterprise' ? 'Contact Sales' : 'Coming Soon'}
+                  </Button>
+                </div>
               </motion.div>
             ))}
           </div>
