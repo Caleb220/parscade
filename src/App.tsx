@@ -1,28 +1,81 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
+import { AuthProvider } from './contexts/AuthContext';
+import HomePage from './pages/HomePage';
+import ProductPage from './pages/ProductPage';
+import DashboardPage from './pages/DashboardPage';
+import AccountPage from './pages/AccountPage';
+import BillingPage from './pages/BillingPage';
+import { updateSEO, defaultSEO } from './utils/seo';
+import { analytics, trackPageView } from './utils/analytics';
 
-function App() {
+// Component to handle route changes and analytics
+const RouteHandler: React.FC = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Update SEO based on route
+    const routeSEO = {
+      '/': {
+        title: 'Parscade - Transform Documents into Structured Data',
+        description: 'Intelligent document parsing platform that automatically extracts, structures, and delivers data from any document format with enterprise-grade accuracy.',
+      },
+      '/product': {
+        title: 'Product - Parscade Document Processing Platform',
+        description: 'Discover how Parscade\'s intelligent parsing pipeline transforms documents through four seamless stages, delivering structured data ready for your applications.',
+      },
+      '/dashboard': {
+        title: 'Dashboard - Parscade',
+        description: 'Manage your document processing workflows with Parscade\'s intuitive dashboard.',
+      },
+      '/account': {
+        title: 'Account Settings - Parscade',
+        description: 'Manage your account preferences, security settings, and team configuration.',
+      },
+      '/billing': {
+        title: 'Billing & Plans - Parscade',
+        description: 'Choose the perfect plan for your document processing needs. Simple, transparent pricing with no hidden fees.',
+      },
+    };
+
+    const currentRoute = routeSEO[location.pathname as keyof typeof routeSEO];
+    updateSEO({
+      ...defaultSEO,
+      ...currentRoute,
+      url: `${window.location.origin}${location.pathname}`,
+    });
+
+    // Track page view
+    trackPageView(location.pathname);
+  }, [location]);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <h1 className="text-3xl font-bold text-gray-900">React App</h1>
-          </div>
-        </div>
-      </header>
-      
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="border-4 border-dashed border-gray-200 rounded-lg h-96 flex items-center justify-center">
-            <div className="text-center">
-              <h2 className="text-2xl font-semibold text-gray-700 mb-2">Ready to build</h2>
-              <p className="text-gray-500">Start adding your components and features here</p>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/product" element={<ProductPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/account" element={<AccountPage />} />
+        <Route path="/billing" element={<BillingPage />} />
+      </Routes>
+    </AnimatePresence>
   );
-}
+};
+
+const App: React.FC = () => {
+  useEffect(() => {
+    // Initialize analytics
+    analytics.init(process.env.REACT_APP_ANALYTICS_KEY);
+  }, []);
+
+  return (
+    <AuthProvider>
+      <Router>
+        <RouteHandler />
+      </Router>
+    </AuthProvider>
+  );
+};
 
 export default App;
