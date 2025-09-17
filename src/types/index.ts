@@ -24,6 +24,7 @@ export interface ApiResponse<T> {
 export interface PipelineStep {
   id: string;
   title: string;
+  shortTitle?: string;
   description: string;
   icon: string;
   status: 'pending' | 'processing' | 'completed' | 'error';
