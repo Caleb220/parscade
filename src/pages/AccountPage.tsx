@@ -3,18 +3,52 @@ import { motion } from 'framer-motion';
 import { User, Settings, Shield, Bell, CreditCard } from 'lucide-react';
 import Layout from '../components/templates/Layout';
 import Button from '../components/atoms/Button';
+import { useAuth } from '../contexts/AuthContext';
+import AuthModal from '../components/organisms/AuthModal';
+import LoadingSpinner from '../components/atoms/LoadingSpinner';
 
 const AccountPage: React.FC = () => {
-  return (
-    <Layout>
-      <div className="bg-gray-50 min-h-screen">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <h1 className="text-2xl font-bold text-gray-900">Account Settings</h1>
-            <p className="text-gray-600 mt-1">Manage your account preferences and security settings</p>
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const [authModalOpen, setAuthModalOpen] = React.useState(false);
+
+  // Redirect to auth if not authenticated
+  React.useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      setAuthModalOpen(true);
+    }
+  }, [isLoading, isAuthenticated]);
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <LoadingSpinner size="lg" />
+            <p className="mt-4 text-gray-600">Loading your account...</p>
           </div>
         </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <>
+      <Layout>
+        <div className="bg-gray-50 min-h-screen">
+          {/* Header */}
+          <div className="bg-white border-b border-gray-200">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <h1 className="text-2xl font-bold text-gray-900">Account Settings</h1>
+              <p className="text-gray-600 mt-1">
+                Manage your account preferences and security settings
+                {user?.email && (
+                  <span className="block text-sm text-blue-600 mt-1">
+                    Signed in as {user.email}
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Coming Soon Notice */}
@@ -123,7 +157,14 @@ const AccountPage: React.FC = () => {
           </motion.div>
         </div>
       </div>
-    </Layout>
+      </Layout>
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode="signin"
+      />
+    </>
   );
 };
 

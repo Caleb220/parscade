@@ -1,45 +1,49 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { User, AuthState } from '../types';
-
-interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  register: (email: string, password: string, name: string) => Promise<void>;
-}
+import { AuthState, AuthContextType, User } from '../types/auth';
+import { supabase } from '../lib/supabase';
+import { AuthError } from '@supabase/supabase-js';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 type AuthAction =
-  | { type: 'LOGIN_START' }
-  | { type: 'LOGIN_SUCCESS'; payload: User }
-  | { type: 'LOGIN_FAILURE' }
-  | { type: 'LOGOUT' }
-  | { type: 'SET_LOADING'; payload: boolean };
+  | { type: 'AUTH_START' }
+  | { type: 'AUTH_SUCCESS'; payload: User }
+  | { type: 'AUTH_ERROR'; payload: string }
+  | { type: 'AUTH_SIGNOUT' }
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'CLEAR_ERROR' };
 
 const authReducer = (state: AuthState, action: AuthAction): AuthState => {
   switch (action.type) {
-    case 'LOGIN_START':
+    case 'AUTH_START':
       return { ...state, isLoading: true };
-    case 'LOGIN_SUCCESS':
+    case 'AUTH_SUCCESS':
       return {
+        ...state,
         user: action.payload,
         isAuthenticated: true,
         isLoading: false,
+        error: null,
       };
-    case 'LOGIN_FAILURE':
+    case 'AUTH_ERROR':
+      return {
+        ...state,
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: action.payload,
+      };
+    case 'AUTH_SIGNOUT':
       return {
         user: null,
         isAuthenticated: false,
         isLoading: false,
-      };
-    case 'LOGOUT':
-      return {
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
+        error: null,
       };
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
+    case 'CLEAR_ERROR':
+      return { ...state, error: null };
     default:
       return state;
   }
@@ -49,6 +53,7 @@ const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  error: null,
 };
 
 interface AuthProviderProps {
@@ -59,72 +64,169 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   useEffect(() => {
-    // Check for existing session on mount
-    const checkAuth = async () => {
+    // Get initial session
+    const getInitialSession = async () => {
       try {
-        // Placeholder for actual auth check
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        dispatch({ type: 'SET_LOADING', payload: false });
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          dispatch({ type: 'AUTH_ERROR', payload: error.message });
+          return;
+        }
+
+        if (session?.user) {
+          dispatch({ type: 'AUTH_SUCCESS', payload: session.user as User });
+        } else {
+          dispatch({ type: 'SET_LOADING', payload: false });
+        }
       } catch (error) {
-        dispatch({ type: 'LOGIN_FAILURE' });
+        console.error('Error in getInitialSession:', error);
+        dispatch({ type: 'AUTH_ERROR', payload: 'Failed to initialize authentication' });
       }
     };
 
-    checkAuth();
+    getInitialSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          dispatch({ type: 'AUTH_SUCCESS', payload: session.user as User });
+        } else if (event === 'SIGNED_OUT') {
+          dispatch({ type: 'AUTH_SIGNOUT' });
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          dispatch({ type: 'AUTH_SUCCESS', payload: session.user as User });
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const login = async (email: string, password: string): Promise<void> => {
-    dispatch({ type: 'LOGIN_START' });
+  const signIn = async (email: string, password: string): Promise<void> => {
+    dispatch({ type: 'AUTH_START' });
     try {
-      // Placeholder for actual login logic
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const mockUser: User = {
-        id: '1',
-        email,
-        name: 'John Doe',
-        role: 'user',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      dispatch({ type: 'LOGIN_SUCCESS', payload: mockUser });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.user) {
+        dispatch({ type: 'AUTH_SUCCESS', payload: data.user as User });
+      }
     } catch (error) {
-      dispatch({ type: 'LOGIN_FAILURE' });
+      const message = error instanceof AuthError 
+        ? getAuthErrorMessage(error)
+        : 'An unexpected error occurred';
+      dispatch({ type: 'AUTH_ERROR', payload: message });
       throw error;
     }
   };
 
-  const logout = (): void => {
-    dispatch({ type: 'LOGOUT' });
-  };
-
-  const register = async (email: string, password: string, name: string): Promise<void> => {
-    dispatch({ type: 'LOGIN_START' });
+  const signUp = async (email: string, password: string, fullName: string): Promise<void> => {
+    dispatch({ type: 'AUTH_START' });
     try {
-      // Placeholder for actual registration logic
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const mockUser: User = {
-        id: '1',
-        email,
-        name,
-        role: 'user',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      dispatch({ type: 'LOGIN_SUCCESS', payload: mockUser });
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: {
+          data: {
+            full_name: fullName.trim(),
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.user) {
+        dispatch({ type: 'AUTH_SUCCESS', payload: data.user as User });
+      }
     } catch (error) {
-      dispatch({ type: 'LOGIN_FAILURE' });
+      const message = error instanceof AuthError 
+        ? getAuthErrorMessage(error)
+        : 'An unexpected error occurred';
+      dispatch({ type: 'AUTH_ERROR', payload: message });
       throw error;
     }
+  };
+
+  const signOut = async (): Promise<void> => {
+    dispatch({ type: 'AUTH_START' });
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        throw error;
+      }
+      dispatch({ type: 'AUTH_SIGNOUT' });
+    } catch (error) {
+      const message = error instanceof AuthError 
+        ? getAuthErrorMessage(error)
+        : 'Failed to sign out';
+      dispatch({ type: 'AUTH_ERROR', payload: message });
+      throw error;
+    }
+  };
+
+  const resetPassword = async (email: string): Promise<void> => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      const message = error instanceof AuthError 
+        ? getAuthErrorMessage(error)
+        : 'Failed to send reset email';
+      throw new Error(message);
+    }
+  };
+
+  const clearError = (): void => {
+    dispatch({ type: 'CLEAR_ERROR' });
   };
 
   const value: AuthContextType = {
     ...state,
-    login,
-    logout,
-    register,
+    signIn,
+    signUp,
+    signOut,
+    resetPassword,
+    clearError,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+// Helper function to convert Supabase auth errors to user-friendly messages
+const getAuthErrorMessage = (error: AuthError): string => {
+  switch (error.message) {
+    case 'Invalid login credentials':
+      return 'Invalid email or password. Please check your credentials and try again.';
+    case 'Email not confirmed':
+      return 'Please check your email and click the confirmation link before signing in.';
+    case 'User already registered':
+      return 'An account with this email already exists. Try signing in instead.';
+    case 'Password should be at least 6 characters':
+      return 'Password must be at least 12 characters long.';
+    case 'Signup is disabled':
+      return 'New account registration is currently disabled. Please contact support.';
+    case 'Email rate limit exceeded':
+      return 'Too many requests. Please wait a moment before trying again.';
+    default:
+      return error.message || 'An unexpected error occurred. Please try again.';
+  }
 };
 
 export const useAuth = (): AuthContextType => {

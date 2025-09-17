@@ -2,10 +2,16 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Play } from 'lucide-react';
 import Button from '../atoms/Button';
+import { useAuth } from '../../contexts/AuthContext';
+import AuthModal from './AuthModal';
 
 const HeroSection: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  const [authModalOpen, setAuthModalOpen] = React.useState(false);
+
   return (
-    <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50 overflow-hidden">
+    <>
+      <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50 overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-0 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob" />
@@ -62,10 +68,11 @@ const HeroSection: React.FC = () => {
             >
               <Button
                 size="lg"
+                onClick={() => isAuthenticated ? window.location.href = '/dashboard' : setAuthModalOpen(true)}
                 rightIcon={<ArrowRight className="w-5 h-5" />}
                 className="text-lg px-8 py-4"
               >
-                Start Free Trial
+                {isAuthenticated ? 'Go to Dashboard' : 'Start Free Trial'}
               </Button>
               <Button
                 variant="outline"
@@ -161,7 +168,14 @@ const HeroSection: React.FC = () => {
           </motion.div>
         </div>
       </div>
-    </section>
+      </section>
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode="signup"
+      />
+    </>
   );
 };
 

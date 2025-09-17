@@ -4,25 +4,53 @@ import { BarChart3, FileText, Clock, Users, Settings, Plus } from 'lucide-react'
 import Layout from '../components/templates/Layout';
 import Button from '../components/atoms/Button';
 import LoadingSpinner from '../components/atoms/LoadingSpinner';
+import { useAuth } from '../contexts/AuthContext';
+import AuthModal from '../components/organisms/AuthModal';
 
 const DashboardPage: React.FC = () => {
-  return (
-    <Layout>
-      <div className="bg-gray-50 min-h-screen">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-                <p className="text-gray-600 mt-1">Manage your document processing workflows</p>
-              </div>
-              <Button leftIcon={<Plus className="w-4 h-4" />}>
-                New Project
-              </Button>
-            </div>
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const [authModalOpen, setAuthModalOpen] = React.useState(false);
+
+  // Redirect to auth if not authenticated
+  React.useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      setAuthModalOpen(true);
+    }
+  }, [isLoading, isAuthenticated]);
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <LoadingSpinner size="lg" />
+            <p className="mt-4 text-gray-600">Loading your dashboard...</p>
           </div>
         </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <>
+      <Layout>
+        <div className="bg-gray-50 min-h-screen">
+          {/* Header */}
+          <div className="bg-white border-b border-gray-200">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    Welcome back{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ''}
+                  </h1>
+                  <p className="text-gray-600 mt-1">Manage your document processing workflows</p>
+                </div>
+                <Button leftIcon={<Plus className="w-4 h-4" />}>
+                  New Project
+                </Button>
+              </div>
+            </div>
+          </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Coming Soon Notice */}
@@ -140,7 +168,14 @@ const DashboardPage: React.FC = () => {
           </motion.div>
         </div>
       </div>
-    </Layout>
+      </Layout>
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode="signin"
+      />
+    </>
   );
 };
 

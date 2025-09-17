@@ -3,6 +3,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import Button from '../atoms/Button';
+import AuthModal from '../organisms/AuthModal';
+import UserMenu from './UserMenu';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface NavigationItem {
   label: string;
@@ -20,7 +23,10 @@ const navigationItems: NavigationItem[] = [
 const Navigation: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const location = useLocation();
+  const { isAuthenticated, isLoading } = useAuth();
 
   const isActive = (href: string): boolean => {
     return location.pathname === href;
@@ -34,8 +40,13 @@ const Navigation: React.FC = () => {
     setActiveDropdown(activeDropdown === label ? null : label);
   };
 
+  const openAuthModal = (mode: 'signin' | 'signup') => {
+    setAuthMode(mode);
+    setAuthModalOpen(true);
+  };
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <>
+      <nav className="bg-white border-b border-gray-200 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -102,12 +113,31 @@ const Navigation: React.FC = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost" size="sm">
-              Sign In
-            </Button>
-            <Button variant="primary" size="sm">
-              Get Started
-            </Button>
+            {isLoading ? (
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-8 bg-gray-200 rounded animate-pulse" />
+                <div className="w-20 h-8 bg-gray-200 rounded animate-pulse" />
+              </div>
+            ) : isAuthenticated ? (
+              <UserMenu />
+            ) : (
+              <>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => openAuthModal('signin')}
+                >
+                  Sign In
+                </Button>
+                <Button 
+                  variant="primary" 
+                  size="sm"
+                  onClick={() => openAuthModal('signup')}
+                >
+                  Get Started
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -147,18 +177,54 @@ const Navigation: React.FC = () => {
                 </Link>
               ))}
               <div className="pt-4 pb-2 border-t border-gray-200 space-y-2">
-                <Button variant="ghost" size="sm" fullWidth>
-                  Sign In
-                </Button>
-                <Button variant="primary" size="sm" fullWidth>
-                  Get Started
-                </Button>
+                {isLoading ? (
+                  <div className="space-y-2">
+                    <div className="h-10 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-10 bg-gray-200 rounded animate-pulse" />
+                  </div>
+                ) : isAuthenticated ? (
+                  <div className="px-3 py-2">
+                    <UserMenu />
+                  </div>
+                ) : (
+                  <>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      fullWidth
+                      onClick={() => {
+                        openAuthModal('signin');
+                        setIsMobileMenuOpen(false);
+                      }}
+                    >
+                      Sign In
+                    </Button>
+                    <Button 
+                      variant="primary" 
+                      size="sm" 
+                      fullWidth
+                      onClick={() => {
+                        openAuthModal('signup');
+                        setIsMobileMenuOpen(false);
+                      }}
+                    >
+                      Get Started
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </nav>
+      </nav>
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode={authMode}
+      />
+    </>
   );
 };
 
