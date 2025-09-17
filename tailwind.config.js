@@ -15,6 +15,12 @@ export default {
           'Cantarell',
           'sans-serif',
         ],
+        display: [
+          'Inter',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'sans-serif',
+        ],
       },
       colors: {
         blue: {

@@ -45,7 +45,19 @@ const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <Link to="/" className="text-2xl font-bold mb-4 block">
+            <Link 
+              to="/" 
+              className="text-2xl font-bold mb-4 block"
+              style={{
+                fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+                fontWeight: 800,
+                letterSpacing: '-0.02em',
+                background: 'linear-gradient(135deg, #ffffff 0%, #e5e7eb 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}
+            >
               Parscade
             </Link>
             <p className="text-gray-400 mb-6 max-w-md">
