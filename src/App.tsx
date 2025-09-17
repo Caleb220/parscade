@@ -66,7 +66,7 @@ const RouteHandler: React.FC = () => {
 const App: React.FC = () => {
   useEffect(() => {
     // Initialize analytics
-    analytics.init(process.env.REACT_APP_ANALYTICS_KEY);
+    analytics.init(import.meta.env.VITE_ANALYTICS_KEY);
   }, []);
 
   return (
