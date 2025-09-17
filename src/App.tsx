@@ -8,6 +8,7 @@ import ProductPage from './pages/ProductPage';
 import DashboardPage from './pages/DashboardPage';
 import AccountPage from './pages/AccountPage';
 import BillingPage from './pages/BillingPage';
+import ContactPage from './pages/ContactPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ErrorPage from './pages/ErrorPage';
 import { updateSEO, defaultSEO } from './utils/seo';
@@ -40,6 +41,10 @@ const RouteHandler: React.FC = () => {
         title: 'Billing & Plans - Parscade',
         description: 'Choose the perfect plan for your document processing needs. Simple, transparent pricing with no hidden fees.',
       },
+      '/contact': {
+        title: 'Contact Us - Parscade',
+        description: 'Get in touch with our team. We\'re here to help with any questions about Parscade.',
+      },
       '/404': {
         title: 'Page Not Found - Parscade',
         description: 'The page you\'re looking for doesn\'t exist.',
@@ -69,6 +74,7 @@ const RouteHandler: React.FC = () => {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/account" element={<AccountPage />} />
         <Route path="/billing" element={<BillingPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="/404" element={<NotFoundPage />} />
         <Route path="/error" element={<ErrorPage />} />
         <Route path="*" element={<NotFoundPage />} />
