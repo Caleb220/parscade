@@ -20,7 +20,7 @@ const HeroSection: React.FC = () => {
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           {/* Content */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -43,7 +43,7 @@ const HeroSection: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight"
+              className="text-3xl sm:text-4xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight"
             >
               Transform Documents into
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
@@ -55,7 +55,7 @@ const HeroSection: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
-              className="text-xl text-gray-600 mb-8 leading-relaxed max-w-2xl"
+              className="text-lg sm:text-xl text-gray-600 mb-8 leading-relaxed max-w-2xl mx-auto lg:mx-0"
             >
               We're building the next generation of document processing. Our intelligent parsing platform will automatically extract, structure, and deliver data from any document format with unprecedented accuracy.
             </motion.p>
@@ -70,7 +70,7 @@ const HeroSection: React.FC = () => {
                 size="lg"
                 onClick={() => setAuthModalOpen(true)}
                 rightIcon={<ArrowRight className="w-5 h-5" />}
-                className="text-lg px-8 py-4"
+                className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4"
               >
                 Join Beta Program
               </Button>
@@ -78,7 +78,7 @@ const HeroSection: React.FC = () => {
                 variant="outline"
                 size="lg"
                 leftIcon={<Play className="w-5 h-5" />}
-                className="text-lg px-8 py-4"
+                className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4"
               >
                 Watch Demo
               </Button>
@@ -88,7 +88,7 @@ const HeroSection: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.6 }}
-              className="mt-8 flex items-center justify-center lg:justify-start space-x-6 text-sm text-gray-500"
+              className="mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start space-y-2 sm:space-y-0 sm:space-x-6 text-sm text-gray-500"
             >
               <div className="flex items-center">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
@@ -112,7 +112,7 @@ const HeroSection: React.FC = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="relative"
           >
-            <div className="relative bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
+            <div className="relative bg-white rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 border border-gray-100">
               {/* Mock Interface */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -121,19 +121,19 @@ const HeroSection: React.FC = () => {
                     <div className="w-3 h-3 bg-yellow-400 rounded-full" />
                     <div className="w-3 h-3 bg-green-400 rounded-full" />
                   </div>
-                  <div className="text-sm text-gray-500">parscade.com</div>
+                  <div className="text-xs sm:text-sm text-gray-500">parscade.com</div>
                 </div>
                 
                 <div className="border-t border-gray-200 pt-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <div className="h-4 bg-gray-200 rounded animate-pulse" />
                       <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
                       <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2" />
                     </div>
                     <div className="space-y-2">
-                      <div className="h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center">
-                        <div className="text-blue-600 font-medium">Parsed Data</div>
+                      <div className="h-16 sm:h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center">
+                        <div className="text-blue-600 font-medium text-sm sm:text-base">Parsed Data</div>
                       </div>
                     </div>
                   </div>
@@ -142,9 +142,9 @@ const HeroSection: React.FC = () => {
                 <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                    <span className="text-sm text-gray-600">Processing...</span>
+                    <span className="text-xs sm:text-sm text-gray-600">Processing...</span>
                   </div>
-                  <div className="text-sm text-gray-500">99.2% accuracy</div>
+                  <div className="text-xs sm:text-sm text-gray-500">99.2% accuracy</div>
                 </div>
               </div>
             </div>
@@ -153,7 +153,7 @@ const HeroSection: React.FC = () => {
             <motion.div
               animate={{ y: [-10, 10, -10] }}
               transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute -top-4 -right-4 bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg"
+              className="absolute -top-2 -right-2 sm:-top-4 sm:-right-4 bg-blue-500 text-white px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium shadow-lg"
             >
               AI Powered
             </motion.div>
@@ -161,7 +161,7 @@ const HeroSection: React.FC = () => {
             <motion.div
               animate={{ y: [10, -10, 10] }}
               transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute -bottom-4 -left-4 bg-purple-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg"
+              className="absolute -bottom-2 -left-2 sm:-bottom-4 sm:-left-4 bg-purple-500 text-white px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium shadow-lg"
             >
               Real-time
             </motion.div>

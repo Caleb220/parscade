@@ -38,12 +38,12 @@ const Footer: React.FC = () => {
   return (
     <footer className="bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 lg:gap-8">
           {/* Brand */}
           <div className="lg:col-span-2">
             <Link 
               to="/" 
-              className="text-3xl font-black text-white mb-4 block"
+              className="text-2xl sm:text-3xl font-black text-white mb-4 block"
               style={{
                 fontFamily: "'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                 fontWeight: 900,
@@ -52,7 +52,7 @@ const Footer: React.FC = () => {
             >
               Parscade
             </Link>
-            <p className="text-gray-400 mb-6 max-w-md">
+            <p className="text-gray-400 mb-6 max-w-md text-sm sm:text-base">
               Transform unstructured documents into structured data with our intelligent parsing platform.
             </p>
             <div className="flex space-x-4">
@@ -73,14 +73,14 @@ const Footer: React.FC = () => {
 
           {/* Links */}
           {Object.entries(footerLinks).map(([category, links]) => (
-            <div key={category}>
-              <h3 className="font-semibold mb-4">{category}</h3>
+            <div key={category} className="col-span-1">
+              <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">{category}</h3>
               <ul className="space-y-2">
                 {links.map(({ label, href }) => (
                   <li key={label}>
                     <Link
                       to={href}
-                      className="text-gray-400 hover:text-white transition-colors duration-200"
+                      className="text-gray-400 hover:text-white transition-colors duration-200 text-sm"
                     >
                       {label}
                     </Link>
@@ -92,11 +92,11 @@ const Footer: React.FC = () => {
         </div>
 
         {/* Bottom */}
-        <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+        <div className="border-t border-gray-800 mt-8 sm:mt-12 pt-6 sm:pt-8 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
           <p className="text-gray-400 text-sm">
             © {currentYear} Parscade. All rights reserved.
           </p>
-          <div className="flex space-x-6 mt-4 md:mt-0">
+          <div className="flex space-x-4 sm:space-x-6">
             <Link
               to="/privacy"
               className="text-gray-400 hover:text-white text-sm transition-colors duration-200"

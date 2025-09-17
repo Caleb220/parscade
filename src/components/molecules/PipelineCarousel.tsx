@@ -90,7 +90,7 @@ const PipelineCarousel: React.FC<PipelineCarouselProps> = ({
 
   return (
     <div
-      className="relative bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-8 overflow-hidden"
+      className="relative bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-4 sm:p-6 lg:p-8 overflow-hidden"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -102,7 +102,7 @@ const PipelineCarousel: React.FC<PipelineCarouselProps> = ({
       {/* Content */}
       <div className="relative z-10">
         {/* Step Indicators */}
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-6 sm:mb-8">
           <div className="flex space-x-2">
             {pipelineSteps.map((_, index) => (
               <button
@@ -120,9 +120,9 @@ const PipelineCarousel: React.FC<PipelineCarouselProps> = ({
         </div>
 
         {/* Main Content */}
-        <div className="grid md:grid-cols-2 gap-8 items-center min-h-[300px]">
+        <div className="flex flex-col lg:grid lg:grid-cols-2 gap-6 lg:gap-8 items-center min-h-[280px] sm:min-h-[300px]">
           {/* Icon and Visual */}
-          <div className="flex justify-center">
+          <div className="flex justify-center order-1 lg:order-none">
             <motion.div
               key={currentStep}
               initial={{ scale: 0.8, opacity: 0 }}
@@ -131,14 +131,14 @@ const PipelineCarousel: React.FC<PipelineCarouselProps> = ({
               transition={{ duration: 0.5, ease: 'easeOut' }}
               className="relative"
             >
-              <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center shadow-lg">
-                <IconComponent className="w-16 h-16 text-blue-600" />
+              <div className="w-24 h-24 sm:w-32 sm:h-32 bg-white rounded-full flex items-center justify-center shadow-lg">
+                <IconComponent className="w-12 h-12 sm:w-16 sm:h-16 text-blue-600" />
               </div>
               
               {/* Status Indicator */}
-              <div className="absolute -top-2 -right-2">
+              <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2">
                 <div
-                  className={`w-6 h-6 rounded-full border-2 border-white ${
+                  className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full border-2 border-white ${
                     currentStepData.status === 'completed'
                       ? 'bg-green-500'
                       : currentStepData.status === 'processing'
@@ -151,7 +151,7 @@ const PipelineCarousel: React.FC<PipelineCarouselProps> = ({
           </div>
 
           {/* Text Content */}
-          <div className="text-center md:text-left">
+          <div className="text-center lg:text-left order-2 lg:order-none">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStep}
@@ -165,10 +165,10 @@ const PipelineCarousel: React.FC<PipelineCarouselProps> = ({
                     Step {currentStep + 1} of {pipelineSteps.length}
                   </span>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">
                   {currentStepData.title}
                 </h3>
-                <p className="text-gray-600 text-lg leading-relaxed">
+                <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
                   {currentStepData.description}
                 </p>
               </motion.div>
@@ -177,7 +177,26 @@ const PipelineCarousel: React.FC<PipelineCarouselProps> = ({
         </div>
 
         {/* Navigation Controls */}
-        <div className="flex justify-between items-center mt-8">
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-6 sm:mt-8 gap-4 sm:gap-0">
+          {/* Mobile: Step buttons first */}
+          <div className="flex flex-wrap justify-center gap-2 sm:hidden order-2 sm:order-none">
+            {pipelineSteps.map((step, index) => (
+              <button
+                key={step.id}
+                onClick={() => goToStep(index)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                  index === currentStep
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-white text-gray-600 hover:bg-gray-50 shadow-sm'
+                }`}
+              >
+                {step.title.split(' ')[0]}
+              </button>
+            ))}
+          </div>
+
+          {/* Navigation arrows */}
+          <div className="flex justify-between items-center w-full sm:w-auto order-1 sm:order-none">
           <button
             onClick={prevStep}
             className="p-2 rounded-full bg-white shadow-md hover:shadow-lg transition-shadow duration-200 text-gray-600 hover:text-gray-900"
@@ -186,18 +205,20 @@ const PipelineCarousel: React.FC<PipelineCarouselProps> = ({
             <ChevronLeft className="w-6 h-6" />
           </button>
 
-          <div className="flex space-x-4">
+          {/* Desktop: Step buttons in center */}
+          <div className="hidden sm:flex space-x-2 lg:space-x-4">
             {pipelineSteps.map((step, index) => (
               <button
                 key={step.id}
                 onClick={() => goToStep(index)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                className={`px-3 py-2 lg:px-4 lg:py-2 rounded-lg text-xs lg:text-sm font-medium transition-all duration-200 ${
                   index === currentStep
                     ? 'bg-blue-600 text-white shadow-md'
                     : 'bg-white text-gray-600 hover:bg-gray-50 shadow-sm'
                 }`}
               >
-                {step.title}
+                <span className="hidden lg:inline">{step.title}</span>
+                <span className="lg:hidden">{step.title.split(' ')[0]}</span>
               </button>
             ))}
           </div>
@@ -209,6 +230,7 @@ const PipelineCarousel: React.FC<PipelineCarouselProps> = ({
           >
             <ChevronRight className="w-6 h-6" />
           </button>
+          </div>
         </div>
       </div>
     </div>
