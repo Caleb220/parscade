@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { AuthState, AuthContextType, User } from '../types/auth';
 import { supabase } from '../lib/supabase';
 import { AuthError } from '@supabase/supabase-js';
@@ -65,6 +65,16 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const shouldEnforceCaptcha = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return true;
+    }
+    const hostname = window.location.hostname.toLowerCase();
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return false;
+    }
+    return hostname.endsWith('parscade.com');
+  }, []);
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   useEffect(() => {
@@ -131,13 +141,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
-  const signIn = async (email: string, password: string): Promise<void> => {
+  const signIn = useCallback(async (email: string, password: string, captchaToken?: string): Promise<void> => {
     dispatch({ type: 'AUTH_START' });
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const enforceCaptcha = shouldEnforceCaptcha();
+      if (enforceCaptcha && !captchaToken) {
+        throw new Error('Captcha verification failed. Please try again.');
+      }
+
+      const credentials: Parameters<typeof supabase.auth.signInWithPassword>[0] = {
         email: email.trim().toLowerCase(),
         password,
-      });
+      };
+
+      if (enforceCaptcha && captchaToken) {
+        credentials.options = { captchaToken };
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword(credentials);
 
       if (error) {
         throw error;
@@ -160,15 +181,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({ type: 'AUTH_ERROR', payload: message });
       throw error;
     }
-  };
+  }, [shouldEnforceCaptcha]);
 
-  const signUp = async (email: string, password: string, fullName: string): Promise<void> => {
+  const signUp = useCallback(async (email: string, password: string, fullName: string, captchaToken?: string): Promise<void> => {
     dispatch({ type: 'AUTH_START' });
     try {
+      const enforceCaptcha = shouldEnforceCaptcha();
+      if (enforceCaptcha && !captchaToken) {
+        throw new Error('Captcha verification failed. Please try again.');
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
         options: {
+          ...(enforceCaptcha && captchaToken ? { captchaToken } : {}),
           data: {
             full_name: fullName.trim(),
           },
@@ -196,9 +223,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({ type: 'AUTH_ERROR', payload: message });
       throw error;
     }
-  };
+  }, [shouldEnforceCaptcha]);
 
-  const signOut = async (): Promise<void> => {
+  const signOut = useCallback(async (): Promise<void> => {
     dispatch({ type: 'AUTH_START' });
     try {
       const { error } = await supabase.auth.signOut();
@@ -213,9 +240,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       dispatch({ type: 'AUTH_ERROR', payload: message });
       throw error;
     }
-  };
+  }, []);
 
-  const resetPassword = async (email: string): Promise<void> => {
+  const resetPassword = useCallback(async (email: string): Promise<void> => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
         redirectTo: `${window.location.origin}/reset-password`,
@@ -230,9 +257,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         : 'Failed to send reset email';
       throw new Error(message);
     }
-  };
+  }, []);
 
-  const resendConfirmationEmail = async (email: string): Promise<void> => {
+  const resendConfirmationEmail = useCallback(async (email: string): Promise<void> => {
     try {
       const { error } = await supabase.auth.resend({
         type: 'signup',
@@ -248,13 +275,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         : 'Failed to resend confirmation email';
       throw new Error(message);
     }
-  };
+  }, []);
 
-  const clearError = (): void => {
+  const clearError = useCallback((): void => {
     dispatch({ type: 'CLEAR_ERROR' });
-  };
+  }, []);
 
-  const value: AuthContextType = {
+  const value: AuthContextType = useMemo<AuthContextType>(() => ({
     ...state,
     signIn,
     signUp,
@@ -262,7 +289,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     resetPassword,
     resendConfirmationEmail,
     clearError,
-  };
+  }), [state, signIn, signUp, signOut, resetPassword, resendConfirmationEmail, clearError]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
@@ -277,7 +304,7 @@ const getAuthErrorMessage = (error: AuthError): string => {
     case 'User already registered':
       return 'An account with this email already exists. Try signing in instead.';
     case 'Password should be at least 6 characters':
-      return 'Password must be at least 12 characters long.';
+      return 'Password must be at least 6 characters long.';
     case 'Signup is disabled':
       return 'New account registration is currently disabled. Please contact support.';
     case 'Email rate limit exceeded':

@@ -33,7 +33,7 @@ const RouteHandler: React.FC = () => {
         description: 'Discover how Parscade\'s intelligent parsing pipeline transforms documents through four seamless stages, delivering structured data ready for your applications.',
       },
       '/dashboard': {
-        title: 'ParscadeParscade',
+        title: 'Parscade',
         description: 'Manage your document processing workflows with Parscade\'s intuitive dashboard.',
       },
       '/account': {

@@ -15,11 +15,13 @@ COPY . .
 # Declare build arguments for Vite environment variables
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
+ARG VITE_HCAPTCHA_SITE_KEY
 
 # Set environment variables from build arguments
 # These will be available to Vite during the build process
 ENV VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
 ENV VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+ENV VITE_HCAPTCHA_SITE_KEY=${VITE_HCAPTCHA_SITE_KEY}
 
 # Build the app
 RUN npm run build

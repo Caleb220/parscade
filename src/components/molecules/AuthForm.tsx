@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import HCaptcha from '@hcaptcha/react-hcaptcha';
+import type HCaptchaComponent from '@hcaptcha/react-hcaptcha';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, User, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
 import Button from '../atoms/Button';
@@ -28,6 +30,24 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) =>
   const [resetEmail, setResetEmail] = useState('');
   const [resetSuccess, setResetSuccess] = useState(false);
   const [attemptCount, setAttemptCount] = useState(0);
+  const [isCaptchaRequired, setIsCaptchaRequired] = useState(false);
+  const captchaRef = useRef<HCaptchaComponent | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaError, setCaptchaError] = useState<string | null>(null);
+
+  const handleCaptchaVerify = useCallback((token: string) => {
+    setCaptchaToken(token);
+    setCaptchaError(null);
+  }, []);
+
+
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const hostname = window.location.hostname.toLowerCase();
+    setIsCaptchaRequired(hostname.endsWith('parscade.com'));  }, []);
 
   // Clear errors when switching modes or when auth error changes
   useEffect(() => {
@@ -47,6 +67,24 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) =>
       return () => clearTimeout(timer);
     }
   }, [isRateLimited, rateLimitResetTime]);
+
+  useEffect(() => {
+    if (!isCaptchaRequired) {
+      return;
+    }
+    setCaptchaToken(null);
+    setCaptchaError(null);
+    captchaRef.current?.resetCaptcha();
+  }, [mode, isCaptchaRequired]);
+
+  useEffect(() => {
+    if (!isCaptchaRequired || !showResetPassword) {
+      return;
+    }
+    setCaptchaToken(null);
+    setCaptchaError(null);
+    captchaRef.current?.resetCaptcha();
+  }, [showResetPassword, isCaptchaRequired]);
 
   const validateForm = (): boolean => {
     const errors: FormErrors = {};
@@ -92,17 +130,36 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) =>
 
     if (!validateForm()) return;
 
+    if (isCaptchaRequired && !captchaToken) {
+      setCaptchaError('Please complete the verification.');
+      return;
+    }
+
+    if (isCaptchaRequired) {
+      setCaptchaError(null);
+    }
+
     try {
       if (mode === 'signin') {
-        await signIn(formData.email, formData.password);
+        await signIn(formData.email, formData.password, isCaptchaRequired ? captchaToken ?? undefined : undefined);
       } else {
-        await signUp(formData.email, formData.password, formData.fullName);
+        await signUp(formData.email, formData.password, formData.fullName, isCaptchaRequired ? captchaToken ?? undefined : undefined);
       }
-      
+
+      if (isCaptchaRequired) {
+        captchaRef.current?.resetCaptcha();
+        setCaptchaToken(null);
+      }
+
       // Reset attempt count on success
       setAttemptCount(0);
       onSuccess?.();
     } catch (error) {
+      if (isCaptchaRequired) {
+        captchaRef.current?.resetCaptcha();
+        setCaptchaToken(null);
+        setCaptchaError('Please complete the verification again.');
+      }
       // Increment attempt count on failure
       setAttemptCount(prev => prev + 1);
     }
@@ -332,11 +389,33 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) =>
           </motion.div>
         )}
 
+        {isCaptchaRequired && (
+          <div className="space-y-2">
+            <HCaptcha
+              ref={captchaRef}
+              sitekey="0x4AAAAAAB1s_uLj6e3iuY8h"
+              onVerify={handleCaptchaVerify}
+              onExpire={() => {
+                setCaptchaToken(null);
+                setCaptchaError('Verification expired. Please try again.');
+              }}
+              onError={(event) => {
+                console.error('hCaptcha error:', event);
+                setCaptchaToken(null);
+                setCaptchaError('Verification failed. Please refresh and try again.');
+              }}
+            />
+            {captchaError && (
+              <p className="text-sm text-red-600">{captchaError}</p>
+            )}
+          </div>
+        )}
+
         <Button
           type="submit"
           fullWidth
           isLoading={isLoading}
-          disabled={isRateLimited}
+          disabled={isRateLimited || (isCaptchaRequired && !captchaToken)}
           rightIcon={<ArrowRight className="w-4 h-4" />}
         >
           {mode === 'signin' ? 'Sign In' : 'Create Account'}

@@ -1,11 +1,11 @@
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
-export interface User extends SupabaseUser {
-  user_metadata?: {
+export type User = SupabaseUser & {
+  user_metadata: SupabaseUser['user_metadata'] & {
     full_name?: string;
     avatar_url?: string;
   };
-}
+};
 
 export interface AuthState {
   user: User | null;
@@ -16,8 +16,8 @@ export interface AuthState {
 }
 
 export interface AuthContextType extends AuthState {
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, fullName: string) => Promise<void>;
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName: string, captchaToken?: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   resendConfirmationEmail: (email: string) => Promise<void>;
