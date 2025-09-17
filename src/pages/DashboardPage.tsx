@@ -9,8 +9,10 @@ import AuthModal from '../components/organisms/AuthModal';
 import AuthLoadingSkeleton from '../components/molecules/AuthLoadingSkeleton';
 
 const DashboardPage: React.FC = () => {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isEmailConfirmed, isLoading, user, resendConfirmationEmail } = useAuth();
   const [authModalOpen, setAuthModalOpen] = React.useState(false);
+  const [isResendingEmail, setIsResendingEmail] = React.useState(false);
+  const [resendSuccess, setResendSuccess] = React.useState(false);
 
   // Redirect to auth if not authenticated
   React.useEffect(() => {
@@ -19,12 +21,93 @@ const DashboardPage: React.FC = () => {
     }
   }, [isLoading, isAuthenticated]);
 
+  const handleResendConfirmation = async () => {
+    if (!user?.email) return;
+    
+    setIsResendingEmail(true);
+    try {
+      await resendConfirmationEmail(user.email);
+      setResendSuccess(true);
+    } catch (error) {
+      console.error('Failed to resend confirmation email:', error);
+    } finally {
+      setIsResendingEmail(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <AuthLoadingSkeleton />
     );
   }
 
+  // Show email confirmation notice if user is authenticated but email not confirmed
+  if (isAuthenticated && !isEmailConfirmed) {
+    return (
+      <Layout>
+        <div className="bg-gray-50 min-h-screen">
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="bg-white rounded-lg p-8 shadow-sm border border-gray-100 text-center"
+            >
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+              
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">
+                Confirm Your Email Address
+              </h1>
+              
+              <p className="text-gray-600 mb-6">
+                We've sent a confirmation email to <strong>{user?.email}</strong>. 
+                Please check your inbox and click the confirmation link to access your dashboard.
+              </p>
+              
+              {resendSuccess ? (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                  <p className="text-green-800">
+                    Confirmation email sent! Please check your inbox.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-500">
+                    Didn't receive the email? Check your spam folder or resend it.
+                  </p>
+                  
+                  <Button
+                    onClick={handleResendConfirmation}
+                    disabled={isResendingEmail}
+                    variant="primary"
+                  >
+                    {isResendingEmail ? (
+                      <>
+                        <LoadingSpinner size="sm" />
+                        Sending...
+                      </>
+                    ) : (
+                      'Resend Confirmation Email'
+                    )}
+                  </Button>
+                </div>
+              )}
+              
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <p className="text-sm text-gray-500">
+                  Need help? <a href="mailto:support@parscade.com" className="text-blue-600 hover:text-blue-700">Contact Support</a>
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
   return (
     <>
       <Layout>

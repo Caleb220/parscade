@@ -7,7 +7,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 type AuthAction =
   | { type: 'AUTH_START' }
-  | { type: 'AUTH_SUCCESS'; payload: User }
+  | { type: 'AUTH_SUCCESS'; payload: { user: User; isEmailConfirmed: boolean } }
   | { type: 'AUTH_ERROR'; payload: string }
   | { type: 'AUTH_SIGNOUT' }
   | { type: 'SET_LOADING'; payload: boolean }
@@ -20,8 +20,9 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
     case 'AUTH_SUCCESS':
       return {
         ...state,
-        user: action.payload,
+        user: action.payload.user,
         isAuthenticated: true,
+        isEmailConfirmed: action.payload.isEmailConfirmed,
         isLoading: false,
         error: null,
       };
@@ -30,6 +31,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         ...state,
         user: null,
         isAuthenticated: false,
+        isEmailConfirmed: false,
         isLoading: false,
         error: action.payload,
       };
@@ -37,6 +39,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
       return {
         user: null,
         isAuthenticated: false,
+        isEmailConfirmed: false,
         isLoading: false,
         error: null,
       };
@@ -52,6 +55,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
+  isEmailConfirmed: false,
   isLoading: true,
   error: null,
 };
@@ -76,7 +80,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         if (session?.user) {
-          dispatch({ type: 'AUTH_SUCCESS', payload: session.user as User });
+          const isEmailConfirmed = !!session.user.email_confirmed_at;
+          dispatch({ 
+            type: 'AUTH_SUCCESS', 
+            payload: { 
+              user: session.user as User, 
+              isEmailConfirmed 
+            } 
+          });
         } else {
           dispatch({ type: 'SET_LOADING', payload: false });
         }
@@ -92,11 +103,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
-          dispatch({ type: 'AUTH_SUCCESS', payload: session.user as User });
+          const isEmailConfirmed = !!session.user.email_confirmed_at;
+          dispatch({ 
+            type: 'AUTH_SUCCESS', 
+            payload: { 
+              user: session.user as User, 
+              isEmailConfirmed 
+            } 
+          });
         } else if (event === 'SIGNED_OUT') {
           dispatch({ type: 'AUTH_SIGNOUT' });
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-          dispatch({ type: 'AUTH_SUCCESS', payload: session.user as User });
+          const isEmailConfirmed = !!session.user.email_confirmed_at;
+          dispatch({ 
+            type: 'AUTH_SUCCESS', 
+            payload: { 
+              user: session.user as User, 
+              isEmailConfirmed 
+            } 
+          });
         }
       }
     );
@@ -119,7 +144,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       if (data.user) {
-        dispatch({ type: 'AUTH_SUCCESS', payload: data.user as User });
+        const isEmailConfirmed = !!data.user.email_confirmed_at;
+        dispatch({ 
+          type: 'AUTH_SUCCESS', 
+          payload: { 
+            user: data.user as User, 
+            isEmailConfirmed 
+          } 
+        });
       }
     } catch (error) {
       const message = error instanceof AuthError 
@@ -148,7 +180,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       if (data.user) {
-        dispatch({ type: 'AUTH_SUCCESS', payload: data.user as User });
+        const isEmailConfirmed = !!data.user.email_confirmed_at;
+        dispatch({ 
+          type: 'AUTH_SUCCESS', 
+          payload: { 
+            user: data.user as User, 
+            isEmailConfirmed 
+          } 
+        });
       }
     } catch (error) {
       const message = error instanceof AuthError 
@@ -193,6 +232,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const resendConfirmationEmail = async (email: string): Promise<void> => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim().toLowerCase(),
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      const message = error instanceof AuthError 
+        ? getAuthErrorMessage(error)
+        : 'Failed to resend confirmation email';
+      throw new Error(message);
+    }
+  };
+
   const clearError = (): void => {
     dispatch({ type: 'CLEAR_ERROR' });
   };
@@ -203,6 +260,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signUp,
     signOut,
     resetPassword,
+    resendConfirmationEmail,
     clearError,
   };
 
