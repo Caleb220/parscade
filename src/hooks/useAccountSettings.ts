@@ -66,7 +66,8 @@ export const useAccountSettings = ({ userId, email, fullName }: UseAccountSettin
     setError(null);
 
     try {
-      const data = await fetchOrCreateAccountSettings(userId);
+      const seedOverrides = defaults ? { profile: defaults.profile } : undefined;
+      const data = await fetchOrCreateAccountSettings(userId, seedOverrides);
       setSettings(data);
     } catch (err) {
       console.error('Failed to load account settings', err);

@@ -1,56 +1,68 @@
-import React from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Layout from '../components/templates/Layout';
 import HeroSection from '../components/organisms/HeroSection';
-import PipelineCarousel from '../components/molecules/PipelineCarousel';
 import FeaturesSection from '../components/organisms/FeaturesSection';
+import { ensureIntersectionObserver } from '../global/intersectionObserver';
+
+const PipelineCarousel = React.lazy(() => import('../components/molecules/PipelineCarousel'));
 
 const HomePage: React.FC = () => {
+  useEffect(() => {
+    ensureIntersectionObserver();
+  }, []);
+
   return (
     <Layout>
       <HeroSection />
-      
-      {/* Pipeline Demo Section */}
-      <section className="py-20 bg-white">
+
+      <section className="py-20 bg-white" aria-labelledby="pipeline-demo">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-hidden">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.6 }}
             className="text-center mb-12"
           >
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+            <h2 id="pipeline-demo" className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
               See how it works
             </h2>
             <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto px-4">
               Our intelligent pipeline transforms your documents through four seamless stages, delivering structured data ready for your applications.
             </p>
           </motion.div>
-          
+
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <PipelineCarousel />
+            <Suspense
+              fallback={(
+                <div className="flex h-72 items-center justify-center rounded-2xl border border-dashed border-gray-300">
+                  <span className="text-sm text-gray-500">Loading interactive preview...</span>
+                </div>
+              )}
+            >
+              <PipelineCarousel />
+            </Suspense>
           </motion.div>
         </div>
       </section>
 
       <FeaturesSection />
 
-      {/* Final CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-blue-600 to-purple-700">
+      <section className="py-20 bg-gradient-to-br from-blue-600 to-purple-700" aria-labelledby="final-cta">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
+            <h2 id="final-cta" className="text-3xl lg:text-4xl font-bold text-white mb-6">
               Join the future of document processing
             </h2>
             <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
@@ -65,7 +77,7 @@ const HomePage: React.FC = () => {
               </button>
             </div>
             <p className="text-blue-200 text-sm mt-4">
-              Early access • Beta program • Shape the product with us
+              Early access · Beta program · Shape the product with us
             </p>
           </motion.div>
         </div>

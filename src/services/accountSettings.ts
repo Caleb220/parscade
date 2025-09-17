@@ -1,4 +1,3 @@
-import { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import {
   AccountSettings,
@@ -8,6 +7,7 @@ import {
   SecuritySettings,
   createDefaultAccountSettings,
 } from '../types/account';
+import { ensureMaybeSingle, ensureSingle, pruneUndefined, SupabaseServiceError } from './supabaseClient';
 
 const TABLE_NAME = 'account_settings';
 
@@ -34,47 +34,60 @@ const mapRowToAccountSettings = (row: AccountSettingsRow): AccountSettings => {
   };
 };
 
-const insertAccountSettings = async (settings: AccountSettings): Promise<AccountSettings> => {
-  const { data, error } = await supabase
-    .from(TABLE_NAME)
-    .insert({
-      user_id: settings.userId,
-      profile: settings.profile,
-      security: settings.security,
-      notifications: settings.notifications,
-      integrations: settings.integrations,
-    })
-    .select()
-    .single();
+const buildInsertPayload = (settings: AccountSettings) =>
+  pruneUndefined({
+    user_id: settings.userId,
+    profile: settings.profile,
+    security: settings.security,
+    notifications: settings.notifications,
+    integrations: settings.integrations,
+  });
 
-  if (error) {
+const buildUpdatePayload = (updates: AccountSettingsUpdate) =>
+  pruneUndefined({
+    profile: updates.profile,
+    security: updates.security,
+    notifications: updates.notifications,
+    integrations: updates.integrations,
+    updated_at: new Date().toISOString(),
+  });
+
+const insertAccountSettings = async (settings: AccountSettings): Promise<AccountSettings> => {
+  try {
+    const response = await supabase
+      .from(TABLE_NAME)
+      .insert(buildInsertPayload(settings))
+      .select()
+      .single();
+
+    const data = ensureSingle(response, 'Insert account settings');
+    return mapRowToAccountSettings(data as AccountSettingsRow);
+  } catch (error) {
+    if (error instanceof SupabaseServiceError && error.causeError.code === '23505') {
+      // Row already exists – return the persisted version instead of failing.
+      const existing = await fetchOrCreateAccountSettings(settings.userId);
+      return existing;
+    }
     throw error;
   }
-
-  return mapRowToAccountSettings(data as AccountSettingsRow);
 };
 
-const handlePostgrestError = (error: PostgrestError): never => {
-  console.error('Supabase account settings error:', error);
-  throw new Error(error.message || 'Failed to process account settings request');
-};
-
-export const fetchOrCreateAccountSettings = async (userId: string): Promise<AccountSettings> => {
-  const { data, error } = await supabase
+export const fetchOrCreateAccountSettings = async (
+  userId: string,
+  seed?: AccountSettingsUpdate,
+): Promise<AccountSettings> => {
+  const response = await supabase
     .from(TABLE_NAME)
     .select('*')
     .eq('user_id', userId)
     .maybeSingle();
 
-  if (error) {
-    handlePostgrestError(error);
+  const row = ensureMaybeSingle(response, 'Fetch account settings');
+  if (row) {
+    return mapRowToAccountSettings(row as AccountSettingsRow);
   }
 
-  if (data) {
-    return mapRowToAccountSettings(data as AccountSettingsRow);
-  }
-
-  const defaults = createDefaultAccountSettings(userId);
+  const defaults = createDefaultAccountSettings(userId, seed as Partial<AccountSettings> | undefined);
   return insertAccountSettings(defaults);
 };
 
@@ -87,42 +100,39 @@ type SectionPayloadMap = {
   integrations: IntegrationSettings;
 };
 
-const ensureAccountSettingsRow = async (userId: string): Promise<AccountSettings> => {
-  return fetchOrCreateAccountSettings(userId);
+const ensureAccountSettingsRow = async (
+  userId: string,
+  seed?: AccountSettingsUpdate,
+): Promise<AccountSettings> => {
+  const defaults = createDefaultAccountSettings(userId, seed as Partial<AccountSettings> | undefined);
+  return insertAccountSettings(defaults);
 };
 
 export const updateAccountSettings = async (
   userId: string,
   updates: AccountSettingsUpdate,
 ): Promise<AccountSettings> => {
-  if (!updates || Object.keys(updates).length === 0) {
-    return ensureAccountSettingsRow(userId);
+  const hasUpdates = updates && Object.keys(updates).length > 0;
+  if (!hasUpdates) {
+    return fetchOrCreateAccountSettings(userId);
   }
 
-  const { data, error } = await supabase
+  const sanitizedUpdates = buildUpdatePayload(updates);
+
+  const response = await supabase
     .from(TABLE_NAME)
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString(),
-    })
+    .update(sanitizedUpdates)
     .eq('user_id', userId)
     .select()
     .maybeSingle();
 
-  if (error) {
-    if (error.code === 'PGRST116') {
-      const defaults = createDefaultAccountSettings(userId, updates as Partial<AccountSettings>);
-      return insertAccountSettings(defaults);
-    }
-    handlePostgrestError(error);
+  const row = ensureMaybeSingle(response, 'Update account settings');
+
+  if (!row) {
+    return ensureAccountSettingsRow(userId, updates);
   }
 
-  if (!data) {
-    const defaults = createDefaultAccountSettings(userId, updates as Partial<AccountSettings>);
-    return insertAccountSettings(defaults);
-  }
-
-  return mapRowToAccountSettings(data as AccountSettingsRow);
+  return mapRowToAccountSettings(row as AccountSettingsRow);
 };
 
 export const updateAccountSettingsSection = async <T extends keyof SectionPayloadMap>(

@@ -21,6 +21,7 @@ import LoadingSpinner from '../atoms/LoadingSpinner';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { useAccountSettings } from '../../hooks/useAccountSettings';
+import { validatePassword as evaluatePasswordStrength } from '../../utils/passwordValidation';
 import {
   IntegrationSettings,
   NotificationSettings,
@@ -61,6 +62,11 @@ const timezoneOptions = [
 
 const languageOptions = ['English (US)', 'English (UK)', 'Spanish', 'French'];
 
+type ProfileFieldKey = 'fullName' | 'email' | 'phone' | 'timezone' | 'language';
+type ProfileValidationErrors = Partial<Record<ProfileFieldKey, string>>;
+
+const profileFieldOrder: ProfileFieldKey[] = ['fullName', 'email', 'phone', 'timezone', 'language'];
+
 const notificationFrequencyOptions = [
   { value: 'real-time', label: 'Real-time' },
   { value: 'daily', label: 'Daily digest' },
@@ -85,6 +91,91 @@ const cloneIntegrations = (integrations: IntegrationSettings): IntegrationSettin
   ...integrations,
   webhookConfigs: integrations.webhookConfigs.map((config) => ({ ...config })),
 });
+
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const fullNamePattern = /^[A-Za-z][A-Za-z .'-]{1,99}$/;
+const phoneAllowedPattern = /^\+?[0-9 ()\-.]+$/;
+
+const validateProfileFieldValue = (profile: ProfileSettings, field: ProfileFieldKey): string | undefined => {
+  switch (field) {
+    case 'fullName': {
+      const value = profile.fullName?.trim() ?? '';
+      if (!value) {
+        return 'Full name is required.';
+      }
+      if (value.length < 2 || value.length > 100) {
+        return 'Full name must be between 2 and 100 characters.';
+      }
+      if (!fullNamePattern.test(value)) {
+        return 'Full name can include letters, spaces, apostrophes, periods, and hyphens only.';
+      }
+      return undefined;
+    }
+    case 'email': {
+      const value = profile.email?.trim() ?? '';
+      if (!value) {
+        return 'Email address is required.';
+      }
+      if (value.length > 254) {
+        return 'Email address is too long.';
+      }
+      if (!emailPattern.test(value)) {
+        return 'Enter a valid email address.';
+      }
+      return undefined;
+    }
+    case 'phone': {
+      const value = profile.phone?.trim() ?? '';
+      if (!value) {
+        return undefined;
+      }
+      if (!phoneAllowedPattern.test(value)) {
+        return 'Phone number can include digits, spaces, parentheses, plus, periods, and hyphens only.';
+      }
+      const digits = value.replace(/\D/g, '');
+      if (digits.length < 8 || digits.length > 15) {
+        return 'Enter a valid international phone number with country code.';
+      }
+      return undefined;
+    }
+    case 'timezone':
+      return profile.timezone ? undefined : 'Select a timezone.';
+    case 'language':
+      return profile.language ? undefined : 'Select a language preference.';
+    default:
+      return undefined;
+  }
+};
+
+const collectProfileErrors = (profile: ProfileSettings): ProfileValidationErrors => {
+  return profileFieldOrder.reduce<ProfileValidationErrors>((acc, field) => {
+    const error = validateProfileFieldValue(profile, field);
+    if (error) {
+      acc[field] = error;
+    }
+    return acc;
+  }, {});
+};
+
+const applyProfileFieldError = (
+  current: ProfileValidationErrors,
+  field: ProfileFieldKey,
+  error?: string,
+): ProfileValidationErrors => {
+  if (error) {
+    if (current[field] === error) {
+      return current;
+    }
+    return { ...current, [field]: error };
+  }
+
+  if (current[field]) {
+    const { [field]: _removed, ...rest } = current;
+    return rest;
+  }
+
+  return current;
+};
 
 const maskApiKey = (key: string): string => {
   if (!key) return 'Not generated yet';
@@ -127,6 +218,7 @@ const formatTimestamp = (timestamp?: string): string => {
     return timestamp;
   }
 };
+
 const AccountSettings: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>('profile');
@@ -149,6 +241,7 @@ const AccountSettings: React.FC = () => {
   });
 
   const [profileDraft, setProfileDraft] = useState<ProfileSettings | null>(null);
+  const [profileErrors, setProfileErrors] = useState<ProfileValidationErrors>({});
   const [securityDraft, setSecurityDraft] = useState<SecuritySettings | null>(null);
   const [notificationsDraft, setNotificationsDraft] = useState<NotificationSettings | null>(null);
   const [integrationsDraft, setIntegrationsDraft] = useState<IntegrationSettings | null>(null);
@@ -156,6 +249,7 @@ const AccountSettings: React.FC = () => {
   useEffect(() => {
     if (!settings) return;
     setProfileDraft(cloneProfile(settings.profile));
+    setProfileErrors({});
     setSecurityDraft(cloneSecurity(settings.security));
     setNotificationsDraft(cloneNotifications(settings.notifications));
     setIntegrationsDraft(cloneIntegrations(settings.integrations));
@@ -177,8 +271,23 @@ const AccountSettings: React.FC = () => {
     [profileDraft, securityDraft, notificationsDraft, integrationsDraft],
   );
 
-  const handleProfileChange = (next: ProfileSettings) => {
+  const handleProfileChange = (field: ProfileFieldKey, value: string) => {
+    if (!profileDraft) return;
+    const next = { ...profileDraft, [field]: value };
     setProfileDraft(cloneProfile(next));
+    setProfileErrors((prev) => {
+      if (!prev[field]) {
+        return prev;
+      }
+      const fieldError = validateProfileFieldValue(next, field);
+      return applyProfileFieldError(prev, field, fieldError);
+    });
+  };
+
+  const handleProfileFieldBlur = (field: ProfileFieldKey) => {
+    if (!profileDraft) return;
+    const fieldError = validateProfileFieldValue(profileDraft, field);
+    setProfileErrors((prev) => applyProfileFieldError(prev, field, fieldError));
   };
 
   const handleSecurityChange = (next: SecuritySettings) => {
@@ -195,9 +304,18 @@ const AccountSettings: React.FC = () => {
 
   const handleSaveProfile = async () => {
     if (!profileDraft) return;
+
+    const errors = collectProfileErrors(profileDraft);
+    if (Object.keys(errors).length > 0) {
+      setProfileErrors(errors);
+      setFeedback({ type: 'error', message: 'Please resolve the highlighted fields before saving.' });
+      return;
+    }
+
     try {
       const updated = await saveProfile(profileDraft);
       setProfileDraft(cloneProfile(updated.profile));
+      setProfileErrors({});
       setFeedback({ type: 'success', message: 'Profile information updated successfully.' });
     } catch (saveError) {
       setFeedback({ type: 'error', message: saveError instanceof Error ? saveError.message : 'Failed to update profile.' });
@@ -247,27 +365,64 @@ const AccountSettings: React.FC = () => {
       throw new Error('Missing authenticated user email.');
     }
 
-    if (!payload.currentPassword) {
+    const currentPassword = payload.currentPassword ?? '';
+    const newPassword = payload.newPassword ?? '';
+    const confirmPassword = payload.confirmPassword ?? '';
+
+    if (!currentPassword.trim()) {
       setPasswordState({ status: 'error', message: 'Please enter your current password.' });
       throw new Error('Missing current password.');
     }
 
-    if (payload.newPassword !== payload.confirmPassword) {
+    if (!newPassword.trim()) {
+      setPasswordState({ status: 'error', message: 'Please enter a new password.' });
+      throw new Error('Missing new password.');
+    }
+
+    if (!confirmPassword.trim()) {
+      setPasswordState({ status: 'error', message: 'Please confirm your new password.' });
+      throw new Error('Missing password confirmation.');
+    }
+
+    if (newPassword !== confirmPassword) {
       setPasswordState({ status: 'error', message: 'New passwords do not match.' });
       throw new Error('Password confirmation mismatch.');
     }
 
-    if (payload.newPassword.length < 12) {
-      setPasswordState({ status: 'error', message: 'Password must be at least 12 characters long.' });
-      throw new Error('Password length requirement not met.');
+    if (newPassword === currentPassword) {
+      setPasswordState({ status: 'error', message: 'New password must be different from your current password.' });
+      throw new Error('Password reuse detected.');
     }
 
-    setPasswordState({ status: 'saving', message: 'Updating password…' });
+    const passwordAssessment = evaluatePasswordStrength(newPassword);
+    if (!passwordAssessment.isValid) {
+      const detail = passwordAssessment.feedback.length
+        ? ' ' + passwordAssessment.feedback.join('; ')
+        : '';
+      setPasswordState({
+        status: 'error',
+        message: `Password must meet our complexity requirements.${detail}`,
+      });
+      throw new Error('Password complexity validation failed.');
+    }
+
+    const emailLocalPart = user.email.split('@')[0]?.toLowerCase();
+    if (emailLocalPart && newPassword.toLowerCase().includes(emailLocalPart)) {
+      setPasswordState({ status: 'error', message: 'Password cannot include your email address.' });
+      throw new Error('Password contains email identifier.');
+    }
+
+    if (/parscade/i.test(newPassword)) {
+      setPasswordState({ status: 'error', message: 'Password cannot contain company names or easily guessable terms.' });
+      throw new Error('Password contains blocked keyword.');
+    }
+
+    setPasswordState({ status: 'saving', message: 'Updating password...' });
 
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: user.email,
-        password: payload.currentPassword,
+        password: currentPassword,
       });
 
       if (signInError) {
@@ -275,7 +430,7 @@ const AccountSettings: React.FC = () => {
       }
 
       const { error: updateError } = await supabase.auth.updateUser({
-        password: payload.newPassword,
+        password: newPassword,
       });
 
       if (updateError) {
@@ -350,7 +505,9 @@ const AccountSettings: React.FC = () => {
             {activeTab === 'profile' && profileDraft && (
               <ProfileTab
                 profile={profileDraft}
+                errors={profileErrors}
                 onChange={handleProfileChange}
+                onFieldBlur={handleProfileFieldBlur}
                 onSave={handleSaveProfile}
                 isSaving={savingSection === 'profile'}
               />
@@ -389,18 +546,36 @@ const AccountSettings: React.FC = () => {
 };
 interface ProfileTabProps {
   profile: ProfileSettings;
-  onChange: (next: ProfileSettings) => void;
+  errors: ProfileValidationErrors;
+  onChange: (field: ProfileFieldKey, value: string) => void;
+  onFieldBlur: (field: ProfileFieldKey) => void;
   onSave: () => Promise<void>;
   isSaving: boolean;
 }
 
-const ProfileTab: React.FC<ProfileTabProps> = ({ profile, onChange, onSave, isSaving }) => {
-  const handleInputChange = (field: keyof ProfileSettings) => (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    onChange({
-      ...profile,
-      [field]: event.target.value,
-    });
+const ProfileTab: React.FC<ProfileTabProps> = ({ profile, errors, onChange, onFieldBlur, onSave, isSaving }) => {
+  const getFieldClasses = (hasError: boolean) =>
+    `w-full px-3 py-2 border rounded-lg focus:ring-2 transition-colors ${
+      hasError
+        ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+        : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+    }`;
+
+  const handleInputChange = (field: ProfileFieldKey) => (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    onChange(field, event.target.value);
   };
+
+  const handleBlur = (field: ProfileFieldKey) => () => {
+    onFieldBlur(field);
+  };
+
+  const hasBlockingErrors = Object.keys(errors).length > 0;
+
+  const fullNameError = errors.fullName;
+  const emailError = errors.email;
+  const phoneError = errors.phone;
+  const timezoneError = errors.timezone;
+  const languageError = errors.language;
 
   return (
     <div className="space-y-8">
@@ -423,9 +598,18 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ profile, onChange, onSave, isSa
                 type="text"
                 value={profile.fullName}
                 onChange={handleInputChange('fullName')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onBlur={handleBlur('fullName')}
+                className={getFieldClasses(!!fullNameError)}
                 placeholder="Your full name"
+                aria-invalid={!!fullNameError}
+                aria-describedby={fullNameError ? 'profile-full-name-error' : undefined}
+                autoComplete="name"
               />
+              {fullNameError && (
+                <p id="profile-full-name-error" className="mt-1 text-sm text-red-600">
+                  {fullNameError}
+                </p>
+              )}
             </div>
 
             <div>
@@ -434,9 +618,18 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ profile, onChange, onSave, isSa
                 type="email"
                 value={profile.email}
                 onChange={handleInputChange('email')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onBlur={handleBlur('email')}
+                className={getFieldClasses(!!emailError)}
                 placeholder="you@example.com"
+                aria-invalid={!!emailError}
+                aria-describedby={emailError ? 'profile-email-error' : undefined}
+                autoComplete="email"
               />
+              {emailError && (
+                <p id="profile-email-error" className="mt-1 text-sm text-red-600">
+                  {emailError}
+                </p>
+              )}
             </div>
 
             <div>
@@ -445,9 +638,18 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ profile, onChange, onSave, isSa
                 type="tel"
                 value={profile.phone}
                 onChange={handleInputChange('phone')}
+                onBlur={handleBlur('phone')}
                 placeholder="+1 (555) 123-4567"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={getFieldClasses(!!phoneError)}
+                aria-invalid={!!phoneError}
+                aria-describedby={phoneError ? 'profile-phone-error' : undefined}
+                autoComplete="tel"
               />
+              {phoneError && (
+                <p id="profile-phone-error" className="mt-1 text-sm text-red-600">
+                  {phoneError}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -481,7 +683,10 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ profile, onChange, onSave, isSa
               <select
                 value={profile.timezone}
                 onChange={handleInputChange('timezone')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onBlur={handleBlur('timezone')}
+                className={getFieldClasses(!!timezoneError)}
+                aria-invalid={!!timezoneError}
+                aria-describedby={timezoneError ? 'profile-timezone-error' : undefined}
               >
                 {timezoneOptions.map((timezone) => (
                   <option key={timezone} value={timezone}>
@@ -489,6 +694,11 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ profile, onChange, onSave, isSa
                   </option>
                 ))}
               </select>
+              {timezoneError && (
+                <p id="profile-timezone-error" className="mt-1 text-sm text-red-600">
+                  {timezoneError}
+                </p>
+              )}
             </div>
 
             <div>
@@ -496,7 +706,10 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ profile, onChange, onSave, isSa
               <select
                 value={profile.language}
                 onChange={handleInputChange('language')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onBlur={handleBlur('language')}
+                className={getFieldClasses(!!languageError)}
+                aria-invalid={!!languageError}
+                aria-describedby={languageError ? 'profile-language-error' : undefined}
               >
                 {languageOptions.map((language) => (
                   <option key={language} value={language}>
@@ -504,6 +717,11 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ profile, onChange, onSave, isSa
                   </option>
                 ))}
               </select>
+              {languageError && (
+                <p id="profile-language-error" className="mt-1 text-sm text-red-600">
+                  {languageError}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -514,7 +732,13 @@ const ProfileTab: React.FC<ProfileTabProps> = ({ profile, onChange, onSave, isSa
           <div className="bg-gray-100 text-gray-600 text-sm px-3 py-1 rounded-full">
             Beta Development
           </div>
-          <Button variant="primary" onClick={onSave} isLoading={isSaving}>
+          <Button
+            variant="primary"
+            onClick={onSave}
+            isLoading={isSaving}
+            disabled={isSaving || hasBlockingErrors}
+            title={hasBlockingErrors ? 'Resolve validation issues before saving.' : undefined}
+          >
             Save Changes
           </Button>
         </div>
@@ -1232,4 +1456,3 @@ const IntegrationRow: React.FC<IntegrationRowProps> = ({
 );
 
 export default AccountSettings;
-

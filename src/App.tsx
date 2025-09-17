@@ -16,6 +16,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import ErrorPage from './pages/ErrorPage';
 import { updateSEO, defaultSEO } from './utils/seo';
 import { analytics, trackPageView } from './utils/analytics';
+import { env } from './config/env';
 
 // Component to handle route changes and analytics
 const RouteHandler: React.FC = () => {
@@ -104,7 +105,9 @@ const RouteHandler: React.FC = () => {
 const App: React.FC = () => {
   useEffect(() => {
     // Initialize analytics
-    analytics.init(import.meta.env.VITE_ANALYTICS_KEY);
+    if (env.analytics.key) {
+      analytics.init(env.analytics.key);
+    }
   }, []);
 
   return (
