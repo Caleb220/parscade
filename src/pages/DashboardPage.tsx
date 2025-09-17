@@ -5,7 +5,6 @@ import Layout from '../components/templates/Layout';
 import Button from '../components/atoms/Button';
 import LoadingSpinner from '../components/atoms/LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
-import AuthModal from '../components/organisms/AuthModal';
 import AuthLoadingSkeleton from '../components/molecules/AuthLoadingSkeleton';
 
 const DashboardPage: React.FC = () => {
