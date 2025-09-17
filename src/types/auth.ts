@@ -16,8 +16,8 @@ export interface AuthState {
 }
 
 export interface AuthContextType extends AuthState {
-  signIn: (email: string, password: string, captchaToken?: string) => Promise<void>;
-  signUp: (email: string, password: string, fullName: string, captchaToken?: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   resendConfirmationEmail: (email: string) => Promise<void>;

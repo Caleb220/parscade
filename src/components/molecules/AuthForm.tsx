@@ -1,6 +1,4 @@
-import HCaptcha from '@hcaptcha/react-hcaptcha';
-import type HCaptchaComponent from '@hcaptcha/react-hcaptcha';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, User, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
 import Button from '../atoms/Button';
@@ -18,36 +16,18 @@ interface AuthFormProps {
 
 const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) => {
   const { signIn, signUp, resetPassword, isLoading, error, clearError } = useAuth();
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     fullName: '',
   });
-  
+
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetSuccess, setResetSuccess] = useState(false);
   const [attemptCount, setAttemptCount] = useState(0);
-  const [isCaptchaRequired, setIsCaptchaRequired] = useState(false);
-  const captchaRef = useRef<HCaptchaComponent | null>(null);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [captchaError, setCaptchaError] = useState<string | null>(null);
-
-  const handleCaptchaVerify = useCallback((token: string) => {
-    setCaptchaToken(token);
-    setCaptchaError(null);
-  }, []);
-
-
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const hostname = window.location.hostname.toLowerCase();
-    setIsCaptchaRequired(hostname.endsWith('parscade.com'));  }, []);
 
   // Clear errors when switching modes or when auth error changes
   useEffect(() => {
@@ -67,24 +47,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) =>
       return () => clearTimeout(timer);
     }
   }, [isRateLimited, rateLimitResetTime]);
-
-  useEffect(() => {
-    if (!isCaptchaRequired) {
-      return;
-    }
-    setCaptchaToken(null);
-    setCaptchaError(null);
-    captchaRef.current?.resetCaptcha();
-  }, [mode, isCaptchaRequired]);
-
-  useEffect(() => {
-    if (!isCaptchaRequired || !showResetPassword) {
-      return;
-    }
-    setCaptchaToken(null);
-    setCaptchaError(null);
-    captchaRef.current?.resetCaptcha();
-  }, [showResetPassword, isCaptchaRequired]);
 
   const validateForm = (): boolean => {
     const errors: FormErrors = {};
@@ -122,7 +84,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) =>
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (isRateLimited) {
       setFormErrors({ general: 'Too many failed attempts. Please wait 5 minutes before trying again.' });
       return;
@@ -130,44 +92,33 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) =>
 
     if (!validateForm()) return;
 
-    if (isCaptchaRequired && !captchaToken) {
-      setCaptchaError('Please complete the verification.');
-      return;
-    }
-
-    if (isCaptchaRequired) {
-      setCaptchaError(null);
-    }
-
     try {
       if (mode === 'signin') {
-        await signIn(formData.email, formData.password, isCaptchaRequired ? captchaToken ?? undefined : undefined);
+        await signIn(formData.email, formData.password);
       } else {
-        await signUp(formData.email, formData.password, formData.fullName, isCaptchaRequired ? captchaToken ?? undefined : undefined);
-      }
-
-      if (isCaptchaRequired) {
-        captchaRef.current?.resetCaptcha();
-        setCaptchaToken(null);
+        await signUp(formData.email, formData.password, formData.fullName);
       }
 
       // Reset attempt count on success
       setAttemptCount(0);
       onSuccess?.();
-    } catch (error) {
-      if (isCaptchaRequired) {
-        captchaRef.current?.resetCaptcha();
-        setCaptchaToken(null);
-        setCaptchaError('Please complete the verification again.');
-      }
+    } catch (authError) {
       // Increment attempt count on failure
-      setAttemptCount(prev => prev + 1);
+      setAttemptCount((prev) => prev + 1);
+
+      // Surface generic error if none present
+      if (!error) {
+        setFormErrors((prev) => ({
+          ...prev,
+          general: 'Authentication failed. Please review your details and try again.',
+        }));
+      }
     }
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!resetEmail) {
       setFormErrors({ email: 'Email is required' });
       return;
@@ -183,23 +134,26 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) =>
       await resetPassword(resetEmail);
       setResetSuccess(true);
       setFormErrors({});
-    } catch (error) {
-      setFormErrors({ general: (error as Error).message });
+    } catch (resetError) {
+      setFormErrors({ general: (resetError as Error).message });
     }
   };
 
   const handleInputChange = (field: keyof typeof formData) => (
-    e: React.ChangeEvent<HTMLInputElement>
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    setFormData(prev => ({ ...prev, [field]: e.target.value }));
+    setFormData((prev) => ({ ...prev, [field]: event.target.value }));
+
     // Clear field-specific error when user starts typing
     if (formErrors[field]) {
-      setFormErrors(prev => ({ ...prev, [field]: undefined }));
+      setFormErrors((prev) => ({ ...prev, [field]: undefined }));
     }
+
     // Clear general error
     if (formErrors.general) {
-      setFormErrors(prev => ({ ...prev, general: undefined }));
+      setFormErrors((prev) => ({ ...prev, general: undefined }));
     }
+
     clearError();
   };
 
@@ -246,40 +200,24 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) =>
               type="email"
               label="Email Address"
               value={resetEmail}
-              onChange={(e) => setResetEmail(e.target.value)}
+              onChange={(event) => setResetEmail(event.target.value)}
               error={formErrors.email}
               leftIcon={<Mail className="w-5 h-5" />}
               placeholder="Enter your email"
               required
             />
 
-            {formErrors.general && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center p-3 bg-red-50 border border-red-200 rounded-md"
-              >
-                <AlertCircle className="w-5 h-5 text-red-600 mr-2 flex-shrink-0" />
-                <span className="text-sm text-red-700">{formErrors.general}</span>
-              </motion.div>
-            )}
-
-            <div className="space-y-4">
-              <Button
-                type="submit"
-                fullWidth
-                isLoading={isLoading}
-                rightIcon={<ArrowRight className="w-4 h-4" />}
-              >
+            <div className="flex flex-col gap-4">
+              <Button type="submit" fullWidth>
                 Send Reset Link
               </Button>
-
               <Button
                 type="button"
-                variant="ghost"
-                fullWidth
+                variant="outline"
                 onClick={() => {
                   setShowResetPassword(false);
+                  setResetSuccess(false);
+                  setResetEmail('');
                   setFormErrors({});
                 }}
               >
@@ -304,10 +242,9 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) =>
           {mode === 'signin' ? 'Welcome back' : 'Create your account'}
         </h2>
         <p className="text-gray-600">
-          {mode === 'signin' 
-            ? 'Sign in to your Parscade account' 
-            : 'Start transforming your documents today'
-          }
+          {mode === 'signin'
+            ? 'Sign in to your Parscade account'
+            : 'Start transforming your documents today'}
         </p>
       </div>
 
@@ -389,33 +326,11 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) =>
           </motion.div>
         )}
 
-        {isCaptchaRequired && (
-          <div className="space-y-2">
-            <HCaptcha
-              ref={captchaRef}
-              sitekey="0x4AAAAAAB1s_uLj6e3iuY8h"
-              onVerify={handleCaptchaVerify}
-              onExpire={() => {
-                setCaptchaToken(null);
-                setCaptchaError('Verification expired. Please try again.');
-              }}
-              onError={(event) => {
-                console.error('hCaptcha error:', event);
-                setCaptchaToken(null);
-                setCaptchaError('Verification failed. Please refresh and try again.');
-              }}
-            />
-            {captchaError && (
-              <p className="text-sm text-red-600">{captchaError}</p>
-            )}
-          </div>
-        )}
-
         <Button
           type="submit"
           fullWidth
           isLoading={isLoading}
-          disabled={isRateLimited || (isCaptchaRequired && !captchaToken)}
+          disabled={isRateLimited}
           rightIcon={<ArrowRight className="w-4 h-4" />}
         >
           {mode === 'signin' ? 'Sign In' : 'Create Account'}

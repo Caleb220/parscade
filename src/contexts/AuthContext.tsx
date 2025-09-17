@@ -65,24 +65,13 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const shouldEnforceCaptcha = useCallback(() => {
-    if (typeof window === 'undefined') {
-      return true;
-    }
-    const hostname = window.location.hostname.toLowerCase();
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return false;
-    }
-    return hostname.endsWith('parscade.com');
-  }, []);
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   useEffect(() => {
-    // Get initial session
     const getInitialSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           console.error('Error getting session:', error);
           dispatch({ type: 'AUTH_ERROR', payload: error.message });
@@ -91,74 +80,60 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         if (session?.user) {
           const isEmailConfirmed = !!session.user.email_confirmed_at;
-          dispatch({ 
-            type: 'AUTH_SUCCESS', 
-            payload: { 
-              user: session.user as User, 
-              isEmailConfirmed 
-            } 
+          dispatch({
+            type: 'AUTH_SUCCESS',
+            payload: {
+              user: session.user as User,
+              isEmailConfirmed,
+            },
           });
         } else {
           dispatch({ type: 'SET_LOADING', payload: false });
         }
-      } catch (error) {
-        console.error('Error in getInitialSession:', error);
+      } catch (initError) {
+        console.error('Error in getInitialSession:', initError);
         dispatch({ type: 'AUTH_ERROR', payload: 'Failed to initialize authentication' });
       }
     };
 
     getInitialSession();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
           const isEmailConfirmed = !!session.user.email_confirmed_at;
-          dispatch({ 
-            type: 'AUTH_SUCCESS', 
-            payload: { 
-              user: session.user as User, 
-              isEmailConfirmed 
-            } 
+          dispatch({
+            type: 'AUTH_SUCCESS',
+            payload: {
+              user: session.user as User,
+              isEmailConfirmed,
+            },
           });
         } else if (event === 'SIGNED_OUT') {
           dispatch({ type: 'AUTH_SIGNOUT' });
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
           const isEmailConfirmed = !!session.user.email_confirmed_at;
-          dispatch({ 
-            type: 'AUTH_SUCCESS', 
-            payload: { 
-              user: session.user as User, 
-              isEmailConfirmed 
-            } 
+          dispatch({
+            type: 'AUTH_SUCCESS',
+            payload: {
+              user: session.user as User,
+              isEmailConfirmed,
+            },
           });
         }
       }
     );
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string, captchaToken?: string): Promise<void> => {
+  const signIn = useCallback(async (email: string, password: string): Promise<void> => {
     dispatch({ type: 'AUTH_START' });
     try {
-      const enforceCaptcha = shouldEnforceCaptcha();
-      if (enforceCaptcha && !captchaToken) {
-        throw new Error('Captcha verification failed. Please try again.');
-      }
-
-      const credentials: Parameters<typeof supabase.auth.signInWithPassword>[0] = {
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
-      };
-
-      if (enforceCaptcha && captchaToken) {
-        credentials.options = { captchaToken };
-      }
-
-      const { data, error } = await supabase.auth.signInWithPassword(credentials);
+      });
 
       if (error) {
         throw error;
@@ -166,36 +141,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (data.user) {
         const isEmailConfirmed = !!data.user.email_confirmed_at;
-        dispatch({ 
-          type: 'AUTH_SUCCESS', 
-          payload: { 
-            user: data.user as User, 
-            isEmailConfirmed 
-          } 
+        dispatch({
+          type: 'AUTH_SUCCESS',
+          payload: {
+            user: data.user as User,
+            isEmailConfirmed,
+          },
         });
       }
-    } catch (error) {
-      const message = error instanceof AuthError 
-        ? getAuthErrorMessage(error)
+    } catch (authError) {
+      const message = authError instanceof AuthError
+        ? getAuthErrorMessage(authError)
         : 'An unexpected error occurred';
       dispatch({ type: 'AUTH_ERROR', payload: message });
-      throw error;
+      throw authError;
     }
-  }, [shouldEnforceCaptcha]);
+  }, []);
 
-  const signUp = useCallback(async (email: string, password: string, fullName: string, captchaToken?: string): Promise<void> => {
+  const signUp = useCallback(async (email: string, password: string, fullName: string): Promise<void> => {
     dispatch({ type: 'AUTH_START' });
     try {
-      const enforceCaptcha = shouldEnforceCaptcha();
-      if (enforceCaptcha && !captchaToken) {
-        throw new Error('Captcha verification failed. Please try again.');
-      }
-
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
         password,
         options: {
-          ...(enforceCaptcha && captchaToken ? { captchaToken } : {}),
           data: {
             full_name: fullName.trim(),
           },
@@ -208,22 +177,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (data.user) {
         const isEmailConfirmed = !!data.user.email_confirmed_at;
-        dispatch({ 
-          type: 'AUTH_SUCCESS', 
-          payload: { 
-            user: data.user as User, 
-            isEmailConfirmed 
-          } 
+        dispatch({
+          type: 'AUTH_SUCCESS',
+          payload: {
+            user: data.user as User,
+            isEmailConfirmed,
+          },
         });
       }
-    } catch (error) {
-      const message = error instanceof AuthError 
-        ? getAuthErrorMessage(error)
+    } catch (signUpError) {
+      const message = signUpError instanceof AuthError
+        ? getAuthErrorMessage(signUpError)
         : 'An unexpected error occurred';
       dispatch({ type: 'AUTH_ERROR', payload: message });
-      throw error;
+      throw signUpError;
     }
-  }, [shouldEnforceCaptcha]);
+  }, []);
 
   const signOut = useCallback(async (): Promise<void> => {
     dispatch({ type: 'AUTH_START' });
@@ -233,12 +202,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw error;
       }
       dispatch({ type: 'AUTH_SIGNOUT' });
-    } catch (error) {
-      const message = error instanceof AuthError 
-        ? getAuthErrorMessage(error)
+    } catch (signOutError) {
+      const message = signOutError instanceof AuthError
+        ? getAuthErrorMessage(signOutError)
         : 'Failed to sign out';
       dispatch({ type: 'AUTH_ERROR', payload: message });
-      throw error;
+      throw signOutError;
     }
   }, []);
 
@@ -251,9 +220,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (error) {
         throw error;
       }
-    } catch (error) {
-      const message = error instanceof AuthError 
-        ? getAuthErrorMessage(error)
+    } catch (resetError) {
+      const message = resetError instanceof AuthError
+        ? getAuthErrorMessage(resetError)
         : 'Failed to send reset email';
       throw new Error(message);
     }
@@ -269,9 +238,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (error) {
         throw error;
       }
-    } catch (error) {
-      const message = error instanceof AuthError 
-        ? getAuthErrorMessage(error)
+    } catch (resendError) {
+      const message = resendError instanceof AuthError
+        ? getAuthErrorMessage(resendError)
         : 'Failed to resend confirmation email';
       throw new Error(message);
     }
