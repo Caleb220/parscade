@@ -10,14 +10,14 @@ import AuthLoadingSkeleton from '../components/molecules/AuthLoadingSkeleton';
 
 const DashboardPage: React.FC = () => {
   const { isAuthenticated, isEmailConfirmed, isLoading, user, resendConfirmationEmail } = useAuth();
-  const [authModalOpen, setAuthModalOpen] = React.useState(false);
   const [isResendingEmail, setIsResendingEmail] = React.useState(false);
   const [resendSuccess, setResendSuccess] = React.useState(false);
 
   // Redirect to auth if not authenticated
   React.useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      setAuthModalOpen(true);
+      // Redirect to home page for authentication
+      window.location.href = '/';
     }
   }, [isLoading, isAuthenticated]);
 
@@ -247,11 +247,6 @@ const DashboardPage: React.FC = () => {
       </div>
       </Layout>
 
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        initialMode="signin"
-      />
     </>
   );
 };
