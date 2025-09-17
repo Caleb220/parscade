@@ -25,47 +25,47 @@ const RouteHandler: React.FC = () => {
     // Update SEO based on route
     const routeSEO = {
       '/': {
-        title: 'Parscade - Transform Documents into Structured Data',
+        title: 'Parscade',
         description: 'Intelligent document parsing platform that automatically extracts, structures, and delivers data from any document format with enterprise-grade accuracy.',
       },
       '/product': {
-        title: 'Product - Parscade Document Processing Platform',
+        title: 'Parscade',
         description: 'Discover how Parscade\'s intelligent parsing pipeline transforms documents through four seamless stages, delivering structured data ready for your applications.',
       },
       '/dashboard': {
-        title: 'Dashboard - Parscade',
+        title: 'ParscadeParscade',
         description: 'Manage your document processing workflows with Parscade\'s intuitive dashboard.',
       },
       '/account': {
-        title: 'Account Settings - Parscade',
+        title: 'Parscade',
         description: 'Manage your account preferences, security settings, and team configuration.',
       },
       '/billing': {
-        title: 'Billing & Plans - Parscade',
+        title: 'Parscade',
         description: 'Choose the perfect plan for your document processing needs. Simple, transparent pricing with no hidden fees.',
       },
       '/contact': {
-        title: 'Contact Us - Parscade',
+        title: 'Parscade',
         description: 'Get in touch with our team. We\'re here to help with any questions about Parscade.',
       },
       '/about': {
-        title: 'About Us - Parscade',
+        title: 'Parscade',
         description: 'Learn about our mission to revolutionize document processing and join our beta program.',
       },
       '/privacy': {
-        title: 'Privacy Policy - Parscade',
+        title: 'Parscade',
         description: 'How we protect your data and respect your privacy during our beta program.',
       },
       '/terms': {
-        title: 'Terms of Service - Parscade',
+        title: 'Parscade',
         description: 'Terms and conditions for using Parscade during our beta program.',
       },
       '/404': {
-        title: 'Page Not Found - Parscade',
+        title: 'Parscade - Page Not Found',
         description: 'The page you\'re looking for doesn\'t exist.',
       },
       '/error': {
-        title: 'Error - Parscade',
+        title: 'Parscade',
         description: 'An unexpected error occurred.',
       },
     };

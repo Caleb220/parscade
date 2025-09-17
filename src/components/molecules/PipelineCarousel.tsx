@@ -113,13 +113,6 @@ const PipelineCarousel: React.FC<PipelineCarouselProps> = ({
 
       {/* Content */}
       <div className="relative z-10">
-        {/* Step Navigator */}
-        <StepNavigator
-          steps={navigatorSteps}
-          currentStep={currentStep}
-          onStepChange={goToStep}
-          className="mb-8 sm:mb-12"
-        />
 
         {/* Main Content */}
         <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 lg:gap-12 items-center min-h-[300px] sm:min-h-[320px]">
@@ -177,6 +170,16 @@ const PipelineCarousel: React.FC<PipelineCarouselProps> = ({
             </AnimatePresence>
           </div>
         </div>
+
+        <div>
+        {/* Step Navigator */}
+        <StepNavigator
+          steps={navigatorSteps}
+          currentStep={currentStep}
+          onStepChange={goToStep}
+          className="mt-8 sm:mb-8"
+        />
+         </div>
       </div>
     </div>
   );

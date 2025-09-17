@@ -137,14 +137,14 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
       {/* Mobile Layout */}
       <div className="sm:hidden">
         <div className="flex items-center justify-center mb-4">
-          <div className="flex items-center space-x-3 overflow-x-auto pb-2">
+          <div className="flex items-center space-x-3 overflow-x-auto pb-2 px-4 pt-2">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center flex-shrink-0">
                 {/* Mobile Node */}
                 <button
                   onClick={() => onStepChange(index)}
                   onKeyDown={(e) => handleKeyDown(e, index)}
-                  className={`relative w-10 h-10 rounded-full border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  className={`relative w-8 h-8 rounded-full border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                     index === currentStep
                       ? 'bg-blue-600 border-blue-600 shadow-lg scale-110'
                       : index < currentStep
