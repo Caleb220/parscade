@@ -4,7 +4,6 @@ import Layout from '../components/templates/Layout';
 import HeroSection from '../components/organisms/HeroSection';
 import PipelineCarousel from '../components/molecules/PipelineCarousel';
 import FeaturesSection from '../components/organisms/FeaturesSection';
-import TestimonialsSection from '../components/organisms/TestimonialsSection';
 
 const HomePage: React.FC = () => {
   return (
@@ -41,7 +40,6 @@ const HomePage: React.FC = () => {
       </section>
 
       <FeaturesSection />
-      <TestimonialsSection />
 
       {/* Final CTA Section */}
       <section className="py-20 bg-gradient-to-br from-blue-600 to-purple-700">
@@ -53,21 +51,21 @@ const HomePage: React.FC = () => {
             transition={{ duration: 0.6 }}
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
-              Ready to transform your document processing?
+              Join the future of document processing
             </h2>
             <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-              Join thousands of companies already using Parscade to streamline their workflows and unlock the value in their documents.
+              Be among the first to experience next-generation document parsing. Join our beta program and help shape the future of intelligent data extraction.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-50 transition-colors duration-200 shadow-lg">
-                Start Free Trial
+                Join Beta Program
               </button>
               <button className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-blue-600 transition-colors duration-200">
-                Contact Sales
+                Request Early Access
               </button>
             </div>
             <p className="text-blue-200 text-sm mt-4">
-              No credit card required • 14-day free trial • Cancel anytime
+              Early access • Beta program • Shape the product with us
             </p>
           </motion.div>
         </div>

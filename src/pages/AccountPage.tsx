@@ -33,7 +33,7 @@ const AccountPage: React.FC = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
               <h1 className="text-2xl font-bold text-gray-900">Account Settings</h1>
               <p className="text-gray-600 mt-1">
-                Manage your account preferences and security settings
+                Beta account management - features coming soon
                 {user?.email && (
                   <span className="block text-sm text-blue-600 mt-1">
                     Signed in as {user.email}
@@ -57,11 +57,11 @@ const AccountPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-blue-900 mb-1">
-                  Account Management Coming Soon
+                  Beta Account Features
                 </h3>
                 <p className="text-blue-700">
-                  We're building comprehensive account management features including profile settings, 
-                  security options, and team management tools.
+                  We're developing comprehensive account management features. As a beta user, 
+                  help us prioritize which features you need most.
                 </p>
               </div>
             </div>
@@ -118,7 +118,7 @@ const AccountPage: React.FC = () => {
                       ))}
                     </div>
                     <Button variant="outline" size="sm" disabled>
-                      Coming Soon
+                      Beta Development
                     </Button>
                   </div>
                 </div>
@@ -134,17 +134,18 @@ const AccountPage: React.FC = () => {
             className="mt-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-8 text-white text-center"
           >
             <h3 className="text-xl font-semibold mb-4">
-              Want early access to account features?
+              Shape Our Account Features
             </h3>
             <p className="text-blue-100 mb-6">
-              Join our beta program to get early access to new features and help shape the future of Parscade.
+              As a beta user, your feedback directly influences which account features we build first. 
+              Tell us what's most important to you.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button className="bg-white text-blue-600 hover:bg-gray-50">
-                Join Beta Program
+                Send Feedback
               </Button>
               <Button variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600">
-                Contact Support
+                Contact Team
               </Button>
             </div>
           </motion.div>

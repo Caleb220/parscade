@@ -9,26 +9,22 @@ const Footer: React.FC = () => {
     Product: [
       { label: 'Features', href: '/product' },
       { label: 'Pricing', href: '/billing' },
-      { label: 'API Documentation', href: '/docs' },
-      { label: 'Integrations', href: '/integrations' },
+      { label: 'Beta Program', href: '/about' },
+      { label: 'Roadmap', href: '/contact' },
     ],
     Company: [
       { label: 'About Us', href: '/about' },
-      { label: 'Careers', href: '/careers' },
-      { label: 'Blog', href: '/blog' },
-      { label: 'Press', href: '/press' },
+      { label: 'Contact', href: '/contact' },
+      { label: 'Beta Community', href: '/about' },
     ],
     Support: [
-      { label: 'Help Center', href: '/help' },
       { label: 'Contact Us', href: '/contact' },
-      { label: 'Status', href: '/status' },
-      { label: 'Community', href: '/community' },
+      { label: 'Beta Support', href: '/contact' },
+      { label: 'Feedback', href: '/contact' },
     ],
     Legal: [
       { label: 'Privacy Policy', href: '/privacy' },
       { label: 'Terms of Service', href: '/terms' },
-      { label: 'Cookie Policy', href: '/cookies' },
-      { label: 'GDPR', href: '/gdpr' },
     ],
   };
 

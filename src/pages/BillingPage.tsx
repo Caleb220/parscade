@@ -67,7 +67,7 @@ const BillingPage: React.FC = () => {
         <div className="bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <h1 className="text-2xl font-bold text-gray-900">Billing & Plans</h1>
-            <p className="text-gray-600 mt-1">Choose the perfect plan for your document processing needs</p>
+            <p className="text-gray-600 mt-1">Future pricing plans - currently in beta development</p>
           </div>
         </div>
 
@@ -80,10 +80,10 @@ const BillingPage: React.FC = () => {
             className="text-center mb-16"
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              Simple, transparent pricing
+              Future Pricing Plans
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-              Start free, scale as you grow. No hidden fees, no surprises.
+              We're still in beta, but here's our planned pricing structure. Beta users get special early access pricing.
             </p>
             
             {/* Billing Toggle */}
@@ -166,9 +166,8 @@ const BillingPage: React.FC = () => {
                     variant={plan.popular ? 'primary' : 'outline'}
                     size="lg"
                     fullWidth
-                    disabled
                   >
-                    {plan.name === 'Enterprise' ? 'Contact Sales' : 'Coming Soon'}
+                    {plan.name === 'Enterprise' ? 'Contact Us' : 'Join Beta'}
                   </Button>
                 </div>
               </motion.div>
@@ -183,7 +182,7 @@ const BillingPage: React.FC = () => {
             className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-16"
           >
             <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">
-              All plans include
+              What we're building
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -192,7 +191,7 @@ const BillingPage: React.FC = () => {
                   <Zap className="w-6 h-6 text-blue-600" />
                 </div>
                 <h4 className="font-semibold text-gray-900 mb-2">Lightning Fast</h4>
-                <p className="text-gray-600">Process documents in seconds with our optimized infrastructure</p>
+                <p className="text-gray-600">Targeting sub-second processing with cloud-native architecture</p>
               </div>
               
               <div className="text-center">
@@ -200,7 +199,7 @@ const BillingPage: React.FC = () => {
                   <Shield className="w-6 h-6 text-green-600" />
                 </div>
                 <h4 className="font-semibold text-gray-900 mb-2">Enterprise Security</h4>
-                <p className="text-gray-600">Bank-grade encryption and SOC 2 compliance included</p>
+                <p className="text-gray-600">Building with enterprise security and compliance from day one</p>
               </div>
               
               <div className="text-center">
@@ -208,7 +207,7 @@ const BillingPage: React.FC = () => {
                   <CreditCard className="w-6 h-6 text-purple-600" />
                 </div>
                 <h4 className="font-semibold text-gray-900 mb-2">Flexible Billing</h4>
-                <p className="text-gray-600">Pay only for what you use with transparent pricing</p>
+                <p className="text-gray-600">Simple, transparent pricing with no hidden fees</p>
               </div>
             </div>
           </motion.div>
@@ -221,26 +220,26 @@ const BillingPage: React.FC = () => {
             className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8"
           >
             <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">
-              Frequently Asked Questions
+              Beta Program FAQ
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {[
                 {
-                  question: 'Can I change plans anytime?',
-                  answer: 'Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.'
+                  question: 'What does beta access include?',
+                  answer: 'Beta users get early access to our platform, direct feedback channels with our team, and special pricing when we launch.'
                 },
                 {
-                  question: 'What happens if I exceed my limit?',
-                  answer: 'We\'ll notify you before you reach your limit and help you upgrade to avoid any service interruption.'
+                  question: 'When will the full platform launch?',
+                  answer: 'We\'re targeting a full launch in 2025. Beta users will be the first to know and get priority access.'
                 },
                 {
-                  question: 'Do you offer custom pricing?',
-                  answer: 'Yes, we offer custom enterprise pricing for high-volume customers with specific requirements.'
+                  question: 'How can I influence the product?',
+                  answer: 'Beta users have direct access to our product team and can request features, report issues, and shape our roadmap.'
                 },
                 {
-                  question: 'Is there a free trial?',
-                  answer: 'Yes, all plans come with a 14-day free trial. No credit card required to get started.'
+                  question: 'What are the beta requirements?',
+                  answer: 'Just enthusiasm for better document processing! We welcome feedback from users of all technical levels.'
                 }
               ].map((faq, index) => (
                 <div key={index}>
@@ -259,17 +258,17 @@ const BillingPage: React.FC = () => {
             className="text-center mt-16"
           >
             <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              Ready to get started?
+              Join our beta program
             </h3>
             <p className="text-gray-600 mb-8">
-              Join thousands of companies already using Parscade to transform their document workflows.
+              Be among the first to experience the future of document processing. Help us build something amazing.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" disabled>
-                Start Free Trial
+              <Button size="lg">
+                Join Beta Program
               </Button>
               <Button variant="outline" size="lg">
-                Contact Sales
+                Learn More
               </Button>
             </div>
           </motion.div>

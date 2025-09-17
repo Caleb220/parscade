@@ -104,16 +104,16 @@ const ProductPage: React.FC = () => {
             className="text-center mb-16"
           >
             <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
-              Enterprise Document Processing
+              Next-Generation Document Processing
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
                 {' '}Platform
               </span>
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-              Transform any document into structured data with our intelligent parsing pipeline. Built for scale, designed for accuracy.
+              We're building an intelligent parsing platform that will transform how businesses extract and structure data from documents. Join us in shaping the future.
             </p>
             <Button size="lg" rightIcon={<ArrowRight className="w-5 h-5" />}>
-              Start Free Trial
+              Join Beta Program
             </Button>
           </motion.div>
         </div>
@@ -130,10 +130,10 @@ const ProductPage: React.FC = () => {
             className="text-center mb-16"
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              How Parscade Works
+              Our Vision: Intelligent Document Processing
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Our four-stage pipeline ensures maximum accuracy and reliability for your document processing needs.
+              We're developing a revolutionary four-stage pipeline that will deliver unprecedented accuracy and reliability for document processing.
             </p>
           </motion.div>
 
@@ -156,7 +156,7 @@ const ProductPage: React.FC = () => {
                     </div>
                     <div>
                       <span className="text-sm font-medium text-blue-600 uppercase tracking-wide">
-                        Step {index + 1}
+                        Stage {index + 1}
                       </span>
                       <h3 className="text-2xl font-bold text-gray-900">{step.title}</h3>
                     </div>
@@ -180,7 +180,7 @@ const ProductPage: React.FC = () => {
                   <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-8 h-80 flex items-center justify-center">
                     <div className="text-center">
                       <step.icon className="w-20 h-20 text-blue-600 mx-auto mb-4" />
-                      <div className="text-gray-500">Interactive demo coming soon</div>
+                      <div className="text-gray-500">Coming in beta release</div>
                     </div>
                   </div>
                 </div>
@@ -201,10 +201,10 @@ const ProductPage: React.FC = () => {
             className="text-center mb-16"
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              Proven Use Cases
+              Target Use Cases
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              See how organizations across industries are using Parscade to transform their document workflows.
+              We're designing Parscade to excel in these key areas. Help us prioritize and refine these capabilities.
             </p>
           </motion.div>
 
@@ -227,16 +227,16 @@ const ProductPage: React.FC = () => {
                 <div className="flex justify-between items-center">
                   <div className="flex space-x-4">
                     <div>
-                      <div className="text-sm text-gray-500">Accuracy</div>
-                      <div className="font-semibold text-green-600">{useCase.accuracy}</div>
+                      <div className="text-sm text-gray-500">Target Accuracy</div>
+                      <div className="font-semibold text-blue-600">{useCase.accuracy}</div>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-500">Volume</div>
+                      <div className="text-sm text-gray-500">Target Volume</div>
                       <div className="font-semibold text-blue-600">{useCase.volume}</div>
                     </div>
                   </div>
                   <Button variant="outline" size="sm">
-                    Learn More
+                    Beta Access
                   </Button>
                 </div>
               </motion.div>
@@ -256,10 +256,10 @@ const ProductPage: React.FC = () => {
             className="text-center mb-16"
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              Built for Enterprise Scale
+              Designed for the Future
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Enterprise-grade infrastructure with the performance and reliability your business demands.
+              We're building with enterprise-grade standards from day one. Here's what we're focusing on.
             </p>
           </motion.div>
 
@@ -276,7 +276,7 @@ const ProductPage: React.FC = () => {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">Developer-First</h3>
               <p className="text-gray-600">
-                RESTful APIs, comprehensive documentation, and SDKs for popular programming languages.
+                Clean APIs, thorough documentation, and developer tools that make integration seamless.
               </p>
             </motion.div>
 
@@ -292,7 +292,7 @@ const ProductPage: React.FC = () => {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">Performance</h3>
               <p className="text-gray-600">
-                Process thousands of documents per minute with sub-second response times and 99.9% uptime.
+                Architecting for speed and scale - targeting sub-second processing with enterprise reliability.
               </p>
             </motion.div>
 
@@ -308,7 +308,7 @@ const ProductPage: React.FC = () => {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">Compliance</h3>
               <p className="text-gray-600">
-                SOC 2 Type II, GDPR compliant, with enterprise security features and audit trails.
+                Building with security and compliance in mind - SOC 2, GDPR, and enterprise-grade protection.
               </p>
             </motion.div>
           </div>
@@ -325,24 +325,24 @@ const ProductPage: React.FC = () => {
             transition={{ duration: 0.6 }}
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
-              Ready to see Parscade in action?
+              Ready to shape the future with us?
             </h2>
             <p className="text-xl text-blue-100 mb-8">
-              Start your free trial today or schedule a personalized demo with our team.
+              Join our beta program and be among the first to experience next-generation document processing.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
                 size="lg"
                 className="bg-white text-blue-600 hover:bg-gray-50"
               >
-                Start Free Trial
+                Join Beta Program
               </Button>
               <Button
                 variant="outline"
                 size="lg"
                 className="border-white text-white hover:bg-white hover:text-blue-600"
               >
-                Schedule Demo
+                Request Access
               </Button>
             </div>
           </motion.div>

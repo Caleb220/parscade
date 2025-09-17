@@ -143,11 +143,11 @@ const DashboardPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-blue-900 mb-1">
-                  Dashboard Coming Soon
+                  Beta Dashboard
                 </h3>
                 <p className="text-blue-700">
-                  We're building an intuitive dashboard for managing your document processing workflows. 
-                  Stay tuned for updates!
+                  Welcome to the Parscade beta! We're actively developing dashboard features. 
+                  Your feedback helps us prioritize what to build next.
                 </p>
               </div>
             </div>
@@ -156,10 +156,10 @@ const DashboardPage: React.FC = () => {
           {/* Preview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {[
-              { icon: FileText, title: 'Documents Processed', value: '12,543', change: '+12%' },
-              { icon: BarChart3, title: 'Success Rate', value: '99.2%', change: '+0.3%' },
-              { icon: Clock, title: 'Avg Processing Time', value: '2.3s', change: '-15%' },
-              { icon: Users, title: 'Active Projects', value: '8', change: '+2' },
+              { icon: FileText, title: 'Beta Documents', value: '0', change: 'Start testing' },
+              { icon: BarChart3, title: 'Beta Status', value: 'Active', change: 'Enrolled' },
+              { icon: Clock, title: 'Feedback Sent', value: '0', change: 'Share ideas' },
+              { icon: Users, title: 'Beta Community', value: '250+', change: 'Growing' },
             ].map((stat, index) => (
               <motion.div
                 key={stat.title}
@@ -172,7 +172,7 @@ const DashboardPage: React.FC = () => {
                   <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
                     <stat.icon className="w-5 h-5 text-gray-600" />
                   </div>
-                  <span className="text-sm text-green-600 font-medium">{stat.change}</span>
+                  <span className="text-sm text-blue-600 font-medium">{stat.change}</span>
                 </div>
                 <div className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</div>
                 <div className="text-sm text-gray-600">{stat.title}</div>
@@ -188,14 +188,20 @@ const DashboardPage: React.FC = () => {
               transition={{ duration: 0.6, delay: 0.4 }}
               className="bg-white rounded-lg p-6 shadow-sm border border-gray-100"
             >
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Beta Updates</h3>
               <div className="space-y-4">
-                {[1, 2, 3].map((item) => (
-                  <div key={item} className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse" />
+                {[
+                  'Welcome to the Parscade beta program!',
+                  'Dashboard features coming in next release',
+                  'Share feedback via the contact form'
+                ].map((update, index) => (
+                  <div key={index} className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full" />
+                    </div>
                     <div className="flex-1">
-                      <div className="h-4 bg-gray-200 rounded animate-pulse mb-2" />
-                      <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3" />
+                      <div className="text-sm text-gray-900">{update}</div>
+                      <div className="text-xs text-gray-500">Beta Program</div>
                     </div>
                   </div>
                 ))}
@@ -208,11 +214,16 @@ const DashboardPage: React.FC = () => {
               transition={{ duration: 0.6, delay: 0.5 }}
               className="bg-white rounded-lg p-6 shadow-sm border border-gray-100"
             >
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Processing Queue</h3>
-              <div className="flex items-center justify-center h-32">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Beta Feedback</h3>
+              <div className="flex items-center justify-center h-32 flex-col">
                 <div className="text-center">
-                  <LoadingSpinner size="lg" />
-                  <p className="text-gray-500 mt-2">Loading queue status...</p>
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Users className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <p className="text-gray-600">Help us build better features</p>
+                  <Button variant="outline" size="sm" className="mt-2">
+                    Send Feedback
+                  </Button>
                 </div>
               </div>
             </motion.div>
@@ -227,18 +238,18 @@ const DashboardPage: React.FC = () => {
           >
             <div className="text-center">
               <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                Full Dashboard Experience Coming Soon
+                Help Us Build the Perfect Dashboard
               </h3>
               <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-                We're building a comprehensive dashboard with real-time analytics, project management, 
-                team collaboration tools, and advanced workflow automation features.
+                As a beta user, your input directly shapes our product. Tell us what dashboard features 
+                would be most valuable for your document processing needs.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button variant="primary">
-                  Join Beta Program
+                  Share Feedback
                 </Button>
                 <Button variant="outline">
-                  Request Demo
+                  Contact Team
                 </Button>
               </div>
             </div>

@@ -35,7 +35,7 @@ const HeroSection: React.FC = () => {
               className="mb-6"
             >
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                🚀 Now in Beta
+                🚀 Early Access Available
               </span>
             </motion.div>
 
@@ -57,7 +57,7 @@ const HeroSection: React.FC = () => {
               transition={{ duration: 0.6, delay: 0.4 }}
               className="text-xl text-gray-600 mb-8 leading-relaxed max-w-2xl"
             >
-              Parscade's intelligent parsing platform automatically extracts, structures, and delivers data from any document format. Scale your document processing with enterprise-grade accuracy.
+              We're building the next generation of document processing. Our intelligent parsing platform will automatically extract, structure, and deliver data from any document format with unprecedented accuracy.
             </motion.p>
 
             <motion.div
@@ -68,11 +68,11 @@ const HeroSection: React.FC = () => {
             >
               <Button
                 size="lg"
-                onClick={() => isAuthenticated ? window.location.href = '/dashboard' : setAuthModalOpen(true)}
+                onClick={() => setAuthModalOpen(true)}
                 rightIcon={<ArrowRight className="w-5 h-5" />}
                 className="text-lg px-8 py-4"
               >
-                {isAuthenticated ? 'Go to Dashboard' : 'Start Free Trial'}
+                Join Beta Program
               </Button>
               <Button
                 variant="outline"
@@ -92,15 +92,15 @@ const HeroSection: React.FC = () => {
             >
               <div className="flex items-center">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
-                No credit card required
+                Early access program
               </div>
               <div className="flex items-center">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
-                14-day free trial
+                Shape the product
               </div>
               <div className="flex items-center">
                 <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
-                Cancel anytime
+                Beta community access
               </div>
             </motion.div>
           </motion.div>

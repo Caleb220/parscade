@@ -56,8 +56,8 @@ export const updateSEO = (config: SEOConfig): void => {
 };
 
 export const defaultSEO: SEOConfig = {
-  title: 'Parscade - Transform Documents into Structured Data',
-  description: 'Intelligent document parsing platform that automatically extracts, structures, and delivers data from any document format with enterprise-grade accuracy.',
+  title: 'Parscade - Next-Generation Document Processing Platform',
+  description: 'Join our beta program and help build the future of document processing. Intelligent parsing platform designed for enterprise-grade accuracy and speed.',
   keywords: [
     'document parsing',
     'data extraction',
@@ -65,7 +65,9 @@ export const defaultSEO: SEOConfig = {
     'document processing',
     'AI parsing',
     'structured data',
-    'enterprise software'
+    'enterprise software',
+    'beta program',
+    'startup'
   ],
   type: 'website'
 };

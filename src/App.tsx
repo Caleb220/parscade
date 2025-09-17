@@ -9,6 +9,9 @@ import DashboardPage from './pages/DashboardPage';
 import AccountPage from './pages/AccountPage';
 import BillingPage from './pages/BillingPage';
 import ContactPage from './pages/ContactPage';
+import AboutPage from './pages/AboutPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ErrorPage from './pages/ErrorPage';
 import { updateSEO, defaultSEO } from './utils/seo';
@@ -45,6 +48,18 @@ const RouteHandler: React.FC = () => {
         title: 'Contact Us - Parscade',
         description: 'Get in touch with our team. We\'re here to help with any questions about Parscade.',
       },
+      '/about': {
+        title: 'About Us - Parscade',
+        description: 'Learn about our mission to revolutionize document processing and join our beta program.',
+      },
+      '/privacy': {
+        title: 'Privacy Policy - Parscade',
+        description: 'How we protect your data and respect your privacy during our beta program.',
+      },
+      '/terms': {
+        title: 'Terms of Service - Parscade',
+        description: 'Terms and conditions for using Parscade during our beta program.',
+      },
       '/404': {
         title: 'Page Not Found - Parscade',
         description: 'The page you\'re looking for doesn\'t exist.',
@@ -75,6 +90,9 @@ const RouteHandler: React.FC = () => {
         <Route path="/account" element={<AccountPage />} />
         <Route path="/billing" element={<BillingPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
         <Route path="/404" element={<NotFoundPage />} />
         <Route path="/error" element={<ErrorPage />} />
         <Route path="*" element={<NotFoundPage />} />

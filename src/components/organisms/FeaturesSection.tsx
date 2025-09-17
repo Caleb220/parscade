@@ -16,47 +16,47 @@ import FeatureCard from '../molecules/FeatureCard';
 const features = [
   {
     title: 'Multi-Format Support',
-    description: 'Process PDFs, Word documents, images, spreadsheets, and more with unified parsing capabilities.',
+    description: 'Designed to handle PDFs, Word documents, images, spreadsheets, and more with intelligent format detection.',
     icon: FileText,
   },
   {
     title: 'Lightning Fast Processing',
-    description: 'Advanced algorithms deliver results in seconds, not minutes. Scale to thousands of documents effortlessly.',
+    description: 'Architecting for speed - targeting sub-second processing times with cloud-native scalability.',
     icon: Zap,
   },
   {
     title: 'Structured Output',
-    description: 'Get clean, structured data in JSON, CSV, or XML formats ready for your applications and databases.',
+    description: 'Clean, structured data output in JSON, CSV, or XML formats, designed for seamless integration.',
     icon: Database,
   },
   {
     title: 'Enterprise Security',
-    description: 'Bank-grade encryption, SOC 2 compliance, and GDPR-ready data handling for complete peace of mind.',
+    description: 'Building with enterprise-grade encryption, SOC 2 compliance, and GDPR-ready data handling from day one.',
     icon: Shield,
   },
   {
     title: 'Advanced Analytics',
-    description: 'Real-time insights into processing performance, accuracy metrics, and usage patterns.',
+    description: 'Comprehensive analytics dashboard for processing performance, accuracy metrics, and usage insights.',
     icon: BarChart3,
   },
   {
     title: 'API & Webhooks',
-    description: 'Seamless integration with your existing systems through RESTful APIs and real-time webhooks.',
+    description: 'Developer-friendly APIs and webhooks designed for seamless integration with your existing systems.',
     icon: Webhook,
   },
   {
     title: '24/7 Processing',
-    description: 'Round-the-clock document processing with 99.9% uptime SLA and automatic failover.',
+    description: 'Designing for 24/7 availability with high uptime targets and automatic failover capabilities.',
     icon: Clock,
   },
   {
     title: 'Team Collaboration',
-    description: 'Built-in collaboration tools, role-based access control, and audit trails for team workflows.',
+    description: 'Team collaboration features with role-based access control and audit trails for enterprise workflows.',
     icon: Users,
   },
   {
     title: 'Global Infrastructure',
-    description: 'Distributed processing centers worldwide ensure low latency and data residency compliance.',
+    description: 'Planning global infrastructure for low latency processing and data residency compliance.',
     icon: Globe,
   },
 ];
@@ -74,10 +74,10 @@ const FeaturesSection: React.FC = () => {
           className="text-center mb-16"
         >
           <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-            Everything you need to process documents at scale
+            The future of document processing
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            From simple text extraction to complex data structuring, Parscade provides enterprise-grade tools for every document processing challenge.
+            We're building intelligent tools that will revolutionize how businesses handle document processing. Here's what we're working on.
           </p>
         </motion.div>
 
@@ -104,17 +104,17 @@ const FeaturesSection: React.FC = () => {
         >
           <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 max-w-2xl mx-auto">
             <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              Ready to transform your document workflow?
+              Want to be part of the journey?
             </h3>
             <p className="text-gray-600 mb-6">
-              Join thousands of companies already using Parscade to streamline their document processing.
+              Join our beta program and help us build the future of document processing. Your feedback will directly shape our product.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200">
-                Start Free Trial
+                Join Beta Program
               </button>
               <button className="border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors duration-200">
-                Schedule Demo
+                Learn More
               </button>
             </div>
           </div>
