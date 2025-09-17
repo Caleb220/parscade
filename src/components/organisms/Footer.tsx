@@ -46,6 +46,9 @@ const Footer: React.FC = () => {
               className="text-2xl sm:text-3xl font-black text-white mb-4 block"
               style={{
                 fontFamily: "'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+              }}
+            >
+            </Link>
             <Link to="/" className="flex items-center mb-4">
               <img
                 src="/main-logo.png"
