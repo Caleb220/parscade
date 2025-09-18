@@ -76,10 +76,12 @@ class Logger {
   private isInitialized = false;
   private isProduction: boolean;
   private isDevelopment: boolean;
+  private isDebugMode: boolean;
 
   constructor() {
     this.isProduction = import.meta.env?.MODE === 'production';
     this.isDevelopment = import.meta.env?.MODE === 'development';
+    this.isDebugMode = import.meta.env?.VITE_SENTRY_DEBUG === 'true' || this.isDevelopment;
   }
 
   /**
@@ -90,25 +92,58 @@ class Logger {
       return;
     }
 
-    // Skip Sentry in development if DSN is not accessible
-    if (!dsn || this.isDevelopment) {
-      console.info('🔧 Sentry disabled in development mode');
+    console.info('🔧 Initializing Sentry logger...', {
+      hasDS: !!dsn,
+      environment: import.meta.env?.MODE,
+      isProduction: this.isProduction,
+      isDevelopment: this.isDevelopment,
+      isDebugMode: this.isDebugMode,
+      release: release || 'unknown'
+    });
+
+    // Skip Sentry if no DSN provided
+    if (!dsn) {
+      console.warn('⚠️ No Sentry DSN provided - logging will use console only');
       this.isInitialized = true;
       return;
     }
 
+    console.info('🚀 Initializing Sentry with DSN:', dsn.substring(0, 50) + '...');
+
     try {
       Sentry.init({
         dsn,
+        debug: this.isDebugMode,
         environment: import.meta.env?.MODE || 'development',
         release: release || `parscade@${import.meta.env?.VITE_APP_VERSION || '1.0.0'}`,
+        
+        // Enhanced configuration for debugging
+        maxBreadcrumbs: 50,
+        attachStacktrace: true,
+        sendClientReports: true,
+        
         integrations: [
           new Integrations.BrowserTracing({
             tracingOrigins: [window.location.hostname, /^\//],
+            routingInstrumentation: Sentry.reactRouterV6Instrumentation(
+              React.useEffect,
+              useLocation,
+              useNavigate,
+              createRoutesFromChildren,
+              matchRoutes
+            ),
           }),
         ],
         tracesSampleRate: this.isProduction ? 0.1 : 1.0,
+        
         beforeSend: (event) => {
+          console.debug('📤 Sentry beforeSend triggered:', {
+            eventId: event.event_id,
+            level: event.level,
+            message: event.message,
+            fingerprint: event.fingerprint,
+          });
+          
           // Sanitize sensitive data
           if (event.extra) {
             event.extra = sanitizeData(event.extra) as Record<string, unknown>;
@@ -116,27 +151,86 @@ class Logger {
           if (event.contexts) {
             event.contexts = sanitizeData(event.contexts) as typeof event.contexts;
           }
+          
+          console.debug('📤 Sentry event processed and ready to send');
           return event;
         },
+        
         beforeBreadcrumb: (breadcrumb) => {
+          console.debug('🍞 Sentry breadcrumb:', breadcrumb.message, breadcrumb.category);
           // Sanitize breadcrumb data
           if (breadcrumb.data) {
             breadcrumb.data = sanitizeData(breadcrumb.data) as Record<string, unknown>;
           }
           return breadcrumb;
         },
+        
+        // Transport options for debugging network issues
+        transport: (options) => {
+          const transport = new Sentry.BrowserTransport(options);
+          return {
+            ...transport,
+            send: (envelope) => {
+              console.debug('📡 Sentry transport sending envelope:', {
+                items: envelope[1]?.length || 0,
+                dsn: options.url
+              });
+              
+              return transport.send(envelope).catch(error => {
+                console.error('❌ Sentry transport error:', error);
+                throw error;
+              });
+            }
+          };
+        }
       });
 
       // Set up global error handlers
       this.setupGlobalHandlers();
       this.isInitialized = true;
 
-      console.info('🚀 Sentry logging initialized successfully');
+      console.info('✅ Sentry initialized successfully', {
+        dsn: dsn.substring(0, 50) + '...',
+        environment: import.meta.env?.MODE,
+        release: release || `parscade@${import.meta.env?.VITE_APP_VERSION || '1.0.0'}`,
+        debug: this.isDebugMode
+      });
+      
+      // Run test events to verify connection
+      this.runInitialTests();
+      
     } catch (error) {
       // Fallback to console if Sentry fails to initialize
       console.warn('⚠️ Sentry initialization failed, falling back to console logging:', error);
       this.isInitialized = true; // Mark as initialized so we don't try again
     }
+  }
+  
+  /**
+   * Run initial test events to verify Sentry connection
+   */
+  private runInitialTests(): void {
+    setTimeout(() => {
+      console.info('🧪 Running Sentry connection tests...');
+      
+      // Test message capture
+      Sentry.captureMessage('Sentry Test Message: Logger initialized successfully', 'info');
+      console.info('📤 Test message sent to Sentry');
+      
+      // Test exception capture
+      Sentry.captureException(new Error('Sentry Test Exception: Logger test error'));
+      console.info('📤 Test exception sent to Sentry');
+      
+      // Test breadcrumb
+      Sentry.addBreadcrumb({
+        message: 'Sentry Test Breadcrumb: Logger initialized',
+        level: 'info',
+        category: 'test'
+      });
+      console.info('📤 Test breadcrumb added to Sentry');
+      
+      console.info('✅ Sentry test events completed. Check your Sentry dashboard for events.');
+    }, 2000); // Wait 2 seconds after initialization
   }
 
   /**
@@ -275,7 +369,8 @@ class Logger {
       console.error(`[ERROR] ${message}`, options?.error || options?.metadata || '');
     }
 
-    if (this.isInitialized && this.isProduction) {
+    if (this.isInitialized) {
+      console.debug('📤 Sending error to Sentry:', { message, hasError: !!options?.error });
       Sentry.withScope((scope) => {
         if (options?.context) {
           scope.setContext('logContext', sanitizeData(options.context) as Record<string, unknown>);
@@ -286,8 +381,10 @@ class Logger {
         
         if (options?.error) {
           Sentry.captureException(options.error);
+          console.debug('📤 Exception sent to Sentry');
         } else {
           Sentry.captureMessage(message, 'error');
+          console.debug('📤 Error message sent to Sentry');
         }
       });
     }

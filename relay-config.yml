@@ -1,0 +1,70 @@
+relay:
+  # Relay mode - set to 'managed' for CapRover deployment
+  mode: managed
+  
+  # Relay host and port configuration
+  host: 0.0.0.0
+  port: 3000
+  
+  # Upstream Sentry configuration
+  upstream: "http://sentry-web:9000/"
+  
+  # Public key for this relay
+  public_key: "YOUR_RELAY_PUBLIC_KEY_HERE"
+  
+  # Secret key for this relay  
+  secret_key: "YOUR_RELAY_SECRET_KEY_HERE"
+
+# Logging configuration for debugging
+logging:
+  level: debug
+  enable_backtraces: true
+  format: pretty
+
+# HTTP configuration
+http:
+  # Timeout settings
+  timeout: 10
+  
+  # CORS settings
+  cors:
+    allowed_origins:
+      - "*"
+    allowed_methods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+    allowed_headers:
+      - "*"
+
+# Cache configuration
+cache:
+  # Event cache settings
+  event_expiry: 600
+  
+  # Envelope cache settings  
+  envelope_expiry: 3600
+
+# Rate limiting
+limits:
+  # Max events per second
+  max_events_per_second: 100
+  
+  # Max event size in bytes
+  max_event_size: 262144
+
+# Processing configuration
+processing:
+  # Enable processing features
+  enabled: true
+  
+  # GeoIP processing
+  geoip: false
+  
+  # Attachment processing
+  attachment:
+    enabled: true
+    max_size: 52428800 # 50MB
+    chunk_size: 8388608  # 8MB
