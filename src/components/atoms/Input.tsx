@@ -1,12 +1,14 @@
-import React, { InputHTMLAttributes, forwardRef } from 'react';
+import React, { forwardRef } from 'react';
+import type { InputHTMLAttributes } from 'react';
+import type { ComponentWithRef } from '../../types/common';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  error?: string;
-  helperText?: string;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
-  variant?: 'default' | 'filled';
+  readonly label?: string;
+  readonly error?: string;
+  readonly helperText?: string;
+  readonly leftIcon?: React.ReactNode;
+  readonly rightIcon?: React.ReactNode;
+  readonly variant?: 'default' | 'filled';
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
@@ -24,11 +26,11 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     },
     ref
   ) => {
-    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+    const inputId = id ?? `input-${Math.random().toString(36).slice(2, 11)}`;
 
     const baseClasses = 'block w-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed';
 
-    const variantClasses = {
+    const variantClasses: Record<NonNullable<InputProps['variant']>, string> = {
       default: 'border border-gray-300 rounded-md px-3 py-2 bg-white',
       filled: 'border-0 rounded-md px-3 py-2 bg-gray-100 focus:bg-white',
     };
@@ -84,7 +86,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       </div>
     );
   }
-);
+) as ComponentWithRef<InputProps, HTMLInputElement>;
 
 Input.displayName = 'Input';
 

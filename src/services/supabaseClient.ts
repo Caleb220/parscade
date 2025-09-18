@@ -1,61 +1,118 @@
-import type { PostgrestError, PostgrestMaybeSingleResponse, PostgrestSingleResponse } from '@supabase/supabase-js';
+/**
+ * Supabase client utilities and error handling.
+ * Provides type-safe wrappers for Supabase operations.
+ */
 
+import type { PostgrestError, PostgrestSingleResponse, PostgrestMaybeSingleResponse } from '@supabase/supabase-js';
+
+/**
+ * Custom error class for Supabase service errors.
+ * Provides structured error handling with additional context.
+ */
 export class SupabaseServiceError extends Error {
-  public readonly causeError: PostgrestError;
-
-  constructor(context: string, error: PostgrestError) {
-    const message = error.message || 'Unexpected Supabase error';
-    super(`${context}: ${message}`);
+  constructor(
+    message: string,
+    public readonly causeError: PostgrestError | Error,
+    public readonly operation: string
+  ) {
+    super(message);
     this.name = 'SupabaseServiceError';
-    this.causeError = error;
-    if (error.details) {
-      this.message += ` — ${error.details}`;
-    }
-    if (error.hint) {
-      this.message += ` (hint: ${error.hint})`;
-    }
   }
 }
 
-export const ensureSingle = <T>(
+/**
+ * Ensures a single record response and handles errors properly.
+ * Throws SupabaseServiceError if the response contains an error.
+ * 
+ * @param response - The Supabase response object
+ * @param operation - Description of the operation for error context
+ * @returns The data from the response
+ * @throws {SupabaseServiceError} If response contains an error
+ */
+export function ensureSingle<T>(
   response: PostgrestSingleResponse<T>,
-  context: string,
-): T => {
+  operation: string
+): T {
   if (response.error) {
-    throw new SupabaseServiceError(context, response.error);
+    throw new SupabaseServiceError(
+      `${operation} failed: ${response.error.message}`,
+      response.error,
+      operation
+    );
   }
-
-  if (!response.data) {
-    throw new Error(`${context}: request completed without data.`);
-  }
-
   return response.data;
-};
+}
 
-export const ensureMaybeSingle = <T>(
+/**
+ * Ensures a maybe single record response and handles errors properly.
+ * Returns null if no record is found, throws on error.
+ * 
+ * @param response - The Supabase response object
+ * @param operation - Description of the operation for error context
+ * @returns The data from the response or null
+ * @throws {SupabaseServiceError} If response contains an error
+ */
+export function ensureMaybeSingle<T>(
   response: PostgrestMaybeSingleResponse<T>,
-  context: string,
-): T | null => {
+  operation: string
+): T | null {
   if (response.error) {
-    throw new SupabaseServiceError(context, response.error);
+    throw new SupabaseServiceError(
+      `${operation} failed: ${response.error.message}`,
+      response.error,
+      operation
+    );
   }
+  return response.data;
+}
 
-  return response.data ?? null;
-};
-
-export const pruneUndefined = <T>(value: T): T => {
-  if (Array.isArray(value)) {
-    return value.map((item) => pruneUndefined(item)) as unknown as T;
+/**
+ * Removes undefined values from an object.
+ * Useful for cleaning up data before sending to Supabase.
+ * 
+ * @param obj - Object to prune
+ * @returns Object with undefined values removed
+ */
+export function pruneUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  const result: Partial<T> = {};
+  
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      result[key as keyof T] = value as T[keyof T];
+    }
   }
+  
+  return result;
+}
 
-  if (value && typeof value === 'object') {
-    return Object.entries(value as Record<string, unknown>)
-      .filter(([, entryValue]) => entryValue !== undefined)
-      .reduce((acc, [key, entryValue]) => {
-        acc[key as keyof T] = pruneUndefined(entryValue) as T[keyof T];
-        return acc;
-      }, {} as Record<keyof T, T[keyof T]>) as T;
+/**
+ * Type guard to check if an error is a SupabaseServiceError.
+ * 
+ * @param error - Error to check
+ * @returns True if error is a SupabaseServiceError
+ */
+export function isSupabaseServiceError(error: unknown): error is SupabaseServiceError {
+  return error instanceof SupabaseServiceError;
+}
+
+/**
+ * Utility to safely extract error message from various error types.
+ * 
+ * @param error - Error object
+ * @returns Human-readable error message
+ */
+export function extractErrorMessage(error: unknown): string {
+  if (isSupabaseServiceError(error)) {
+    return error.message;
   }
-
-  return value;
-};
+  
+  if (error instanceof Error) {
+    return error.message;
+  }
+  
+  if (typeof error === 'string') {
+    return error;
+  }
+  
+  return 'An unexpected error occurred';
+}

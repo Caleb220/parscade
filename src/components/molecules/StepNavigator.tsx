@@ -2,16 +2,16 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 interface Step {
-  id: string;
-  title: string;
-  shortTitle?: string;
+  readonly id: string;
+  readonly title: string;
+  readonly shortTitle?: string;
 }
 
 interface StepNavigatorProps {
-  steps: Step[];
-  currentStep: number;
-  onStepChange: (stepIndex: number) => void;
-  className?: string;
+  readonly steps: readonly Step[];
+  readonly currentStep: number;
+  readonly onStepChange: (stepIndex: number) => void;
+  readonly className?: string;
 }
 
 const StepNavigator: React.FC<StepNavigatorProps> = ({
@@ -108,7 +108,7 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
                         : 'text-gray-600'
                     }`}
                   >
-                    {step.shortTitle || step.title}
+                    {step.shortTitle ?? step.title}
                   </div>
                 </motion.div>
               </div>
@@ -221,7 +221,7 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
             animate={{ opacity: 1, y: 0 }}
             className="text-sm font-medium text-blue-600"
           >
-            Step {currentStep + 1}: {steps[currentStep].title}
+            Step {currentStep + 1}: {steps[currentStep]?.title}
           </motion.div>
         </div>
       </div>

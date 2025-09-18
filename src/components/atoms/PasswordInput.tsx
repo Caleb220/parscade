@@ -1,14 +1,16 @@
 import React, { useState, forwardRef } from 'react';
+import type { InputHTMLAttributes } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { validatePassword, getPasswordStrengthLabel, getPasswordStrengthColor } from '../../utils/passwordValidation';
+import type { ComponentWithRef } from '../../types/common';
 
 interface PasswordInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
-  label?: string;
-  error?: string;
-  helperText?: string;
-  showStrengthMeter?: boolean;
-  variant?: 'default' | 'filled';
+  readonly label?: string;
+  readonly error?: string;
+  readonly helperText?: string;
+  readonly showStrengthMeter?: boolean;
+  readonly variant?: 'default' | 'filled';
 }
 
 const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
@@ -28,13 +30,15 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
     ref
   ) => {
     const [showPassword, setShowPassword] = useState(false);
-    const inputId = id || `password-${Math.random().toString(36).substr(2, 9)}`;
+    const inputId = id ?? `password-${Math.random().toString(36).slice(2, 11)}`;
     
-    const passwordStrength = showStrengthMeter ? validatePassword(value as string) : null;
+    const passwordStrength = showStrengthMeter && typeof value === 'string' 
+      ? validatePassword(value) 
+      : null;
 
     const baseClasses = 'block w-full pr-12 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed';
 
-    const variantClasses = {
+    const variantClasses: Record<NonNullable<PasswordInputProps['variant']>, string> = {
       default: 'border border-gray-300 rounded-md px-3 py-2 bg-white',
       filled: 'border-0 rounded-md px-3 py-2 bg-gray-100 focus:bg-white',
     };
@@ -50,7 +54,7 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
       className,
     ].join(' ');
 
-    const togglePasswordVisibility = () => {
+    const togglePasswordVisibility = (): void => {
       setShowPassword(!showPassword);
     };
 
@@ -81,6 +85,7 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
             onClick={togglePasswordVisibility}
             className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600 transition-colors duration-200"
             tabIndex={-1}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? (
               <EyeOff className="h-5 w-5" />
@@ -111,7 +116,7 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
               </div>
               
               <div className="flex space-x-1 mb-2">
-                {[...Array(5)].map((_, index) => (
+                {Array.from({ length: 5 }, (_, index) => (
                   <div
                     key={index}
                     className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
@@ -153,7 +158,7 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
       </div>
     );
   }
-);
+) as ComponentWithRef<PasswordInputProps, HTMLInputElement>;
 
 PasswordInput.displayName = 'PasswordInput';
 

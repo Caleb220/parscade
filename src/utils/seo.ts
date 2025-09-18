@@ -1,6 +1,13 @@
-import { seoConfigSchema, type SeoConfig } from '../schemas';
+import { seoConfigSchema } from '../schemas';
+import type { SeoConfig } from '../schemas';
 import { logWarn } from './log';
 
+/**
+ * Updates the document's SEO metadata based on the provided configuration.
+ * Safely handles meta tag creation and updates with validation.
+ * 
+ * @param configInput - SEO configuration object
+ */
 export const updateSEO = (configInput: SeoConfig): void => {
   const parsed = seoConfigSchema.safeParse(configInput);
   if (!parsed.success) {
@@ -8,10 +15,17 @@ export const updateSEO = (configInput: SeoConfig): void => {
     return;
   }
   const config = parsed.data;
+  
   // Update title
   document.title = config.title;
 
-  // Update or create meta tags
+  /**
+   * Helper function to update or create meta tags.
+   * 
+   * @param name - Meta tag name or property
+   * @param content - Content for the meta tag
+   * @param property - Whether to use 'property' attribute instead of 'name'
+   */
   const updateMetaTag = (name: string, content: string, property = false) => {
     const attribute = property ? 'property' : 'name';
     let element = document.querySelector(`meta[${attribute}="${name}"]`) as HTMLMetaElement;
@@ -55,6 +69,10 @@ export const updateSEO = (configInput: SeoConfig): void => {
   }
 };
 
+/**
+ * Default SEO configuration for the application.
+ * Provides fallback values for all pages.
+ */
 export const defaultSEO: SeoConfig = seoConfigSchema.parse({
   title: 'Parscade',
   description: 'Join our beta program and help build the future of document processing. Intelligent parsing platform designed for enterprise-grade accuracy and speed.',

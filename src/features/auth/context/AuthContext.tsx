@@ -1,14 +1,15 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback, useMemo } from 'react';
-import { AuthState, AuthContextType, User } from '../types/authTypes';
+import type { AuthState, AuthContextType, User } from '../types/authTypes';
 import { supabase } from '../../../lib/supabase';
-import { AuthError } from '@supabase/supabase-js';
+import type { AuthError } from '@supabase/supabase-js';
 import { logWarn } from '../../../utils/log';
+import type { TypedSupabaseUser } from '../../../types/supabase';
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | null>(null);
 
 type AuthAction =
   | { type: 'AUTH_START' }
-  | { type: 'AUTH_SUCCESS'; payload: { user: User; isEmailConfirmed: boolean } }
+  | { type: 'AUTH_SUCCESS'; payload: { readonly user: User; readonly isEmailConfirmed: boolean } }
   | { type: 'AUTH_ERROR'; payload: string }
   | { type: 'AUTH_SIGNOUT' }
   | { type: 'SET_LOADING'; payload: boolean }
@@ -49,6 +50,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
     case 'CLEAR_ERROR':
       return { ...state, error: null };
     default:
+      // Exhaustive check to ensure all action types are handled
       return state;
   }
 };
@@ -62,7 +64,7 @@ const initialState: AuthState = {
 };
 
 interface AuthProviderProps {
-  children: ReactNode;
+  readonly children: ReactNode;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -80,44 +82,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         if (session?.user) {
-          const isEmailConfirmed = !!session.user.email_confirmed_at;
+          const typedUser = session.user as TypedSupabaseUser;
+          const isEmailConfirmed = Boolean(session.user.email_confirmed_at);
           dispatch({
             type: 'AUTH_SUCCESS',
             payload: {
-              user: session.user as User,
+              user: typedUser,
               isEmailConfirmed,
             },
           });
         } else {
           dispatch({ type: 'SET_LOADING', payload: false });
         }
-      } catch (_initError) {
+      } catch (initError) {
         logWarn('Auth: error in getInitialSession');
-        dispatch({ type: 'AUTH_ERROR', payload: 'Failed to initialize authentication' });
+        const errorMessage = initError instanceof Error ? initError.message : 'Failed to initialize authentication';
+        dispatch({ type: 'AUTH_ERROR', payload: errorMessage });
       }
     };
 
-    getInitialSession();
+    void getInitialSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event, session): Promise<void> => {
         if (event === 'SIGNED_IN' && session?.user) {
-          const isEmailConfirmed = !!session.user.email_confirmed_at;
+          const typedUser = session.user as TypedSupabaseUser;
+          const isEmailConfirmed = Boolean(session.user.email_confirmed_at);
           dispatch({
             type: 'AUTH_SUCCESS',
             payload: {
-              user: session.user as User,
+              user: typedUser,
               isEmailConfirmed,
             },
           });
         } else if (event === 'SIGNED_OUT') {
           dispatch({ type: 'AUTH_SIGNOUT' });
         } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-          const isEmailConfirmed = !!session.user.email_confirmed_at;
+          const typedUser = session.user as TypedSupabaseUser;
+          const isEmailConfirmed = Boolean(session.user.email_confirmed_at);
           dispatch({
             type: 'AUTH_SUCCESS',
             payload: {
-              user: session.user as User,
+              user: typedUser,
               isEmailConfirmed,
             },
           });
@@ -141,11 +147,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       if (data.user) {
-        const isEmailConfirmed = !!data.user.email_confirmed_at;
+        const typedUser = data.user as TypedSupabaseUser;
+        const isEmailConfirmed = Boolean(data.user.email_confirmed_at);
         dispatch({
           type: 'AUTH_SUCCESS',
           payload: {
-            user: data.user as User,
+            user: typedUser,
             isEmailConfirmed,
           },
         });
@@ -177,11 +184,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       if (data.user) {
-        const isEmailConfirmed = !!data.user.email_confirmed_at;
+        const typedUser = data.user as TypedSupabaseUser;
+        const isEmailConfirmed = Boolean(data.user.email_confirmed_at);
         dispatch({
           type: 'AUTH_SUCCESS',
           payload: {
-            user: data.user as User,
+            user: typedUser,
             isEmailConfirmed,
           },
         });
@@ -264,7 +272,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-// Helper function to convert Supabase auth errors to user-friendly messages
+/**
+ * Converts Supabase auth errors to user-friendly messages.
+ * Provides consistent error messaging across the application.
+ * 
+ * @param error - The AuthError from Supabase
+ * @returns User-friendly error message
+ */
 const getAuthErrorMessage = (error: AuthError): string => {
   switch (error.message) {
     case 'Invalid login credentials':
@@ -284,9 +298,16 @@ const getAuthErrorMessage = (error: AuthError): string => {
   }
 };
 
+/**
+ * Custom hook to access the auth context.
+ * Throws an error if used outside of AuthProvider.
+ * 
+ * @returns The auth context value
+ * @throws {Error} If used outside of AuthProvider
+ */
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (context === null) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

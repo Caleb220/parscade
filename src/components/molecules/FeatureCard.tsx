@@ -1,13 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { DivideIcon as LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 interface FeatureCardProps {
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  delay?: number;
-  className?: string;
+  readonly title: string;
+  readonly description: string;
+  readonly icon: LucideIcon;
+  readonly delay?: number;
+  readonly className?: string;
 }
 
 const FeatureCard: React.FC<FeatureCardProps> = ({
