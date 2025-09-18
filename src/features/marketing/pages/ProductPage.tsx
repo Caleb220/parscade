@@ -12,8 +12,21 @@ import {
 } from 'lucide-react';
 import Layout from '../../../components/templates/Layout';
 import Button from '../../../components/atoms/Button';
+import { useAuth } from '../../auth';
+import { useNavigate } from 'react-router-dom';
 
 const ProductPage: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  const handleJoinBetaClick = (): void => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      navigate('/', { state: { openAuthModal: true } });
+    }
+  };
+
   const pipelineSteps = [
     {
       icon: FileText,
@@ -333,16 +346,17 @@ const ProductPage: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
                 size="lg"
+                onClick={handleJoinBetaClick}
                 className="bg-white text-blue-600 hover:bg-gray-50"
               >
-                Join Beta Program
+                {isAuthenticated ? 'Go to Dashboard' : 'Join Beta Program'}
               </Button>
               <Button
                 variant="outline"
                 size="lg"
                 className="border-white text-white hover:bg-white hover:text-blue-600"
               >
-                Request Access
+                {isAuthenticated ? 'View Features' : 'Request Access'}
               </Button>
             </div>
           </motion.div>
