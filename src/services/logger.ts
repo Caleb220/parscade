@@ -353,5 +353,3 @@ class PinoLogger {
 
 // Export singleton instance
 export const logger = new PinoLogger();
-
-export { logger }
