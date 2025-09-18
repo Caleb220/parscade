@@ -94,13 +94,31 @@ const rateLimiter = new PasswordResetRateLimiter();
  * @returns Validated query parameters or null if invalid
  */
 export const validateResetQuery = (queryParams: URLSearchParams): PasswordResetQuery | null => {
+  console.log('🔍 All query parameters:', Object.fromEntries(queryParams.entries()));
+  console.log('🔍 Full URL:', window.location.href);
+  console.log('🔍 URL Hash:', window.location.hash);
+  
   // Handle both new and legacy URL formats from Supabase
   const rawParams: any = {};
   
-  console.log('🔍 All query parameters:', Object.fromEntries(queryParams.entries()));
+  // Check if tokens are in URL hash (some Supabase configurations use fragments)
+  if (window.location.hash) {
+    console.log('🔍 Checking URL hash for tokens:', window.location.hash);
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    console.log('🔍 Hash parameters:', Object.fromEntries(hashParams.entries()));
+    
+    if (hashParams.get('access_token')) {
+      console.log('📋 Found tokens in URL hash');
+      rawParams.access_token = hashParams.get('access_token');
+      rawParams.refresh_token = hashParams.get('refresh_token') || hashParams.get('access_token');
+      rawParams.expires_in = hashParams.get('expires_in') || '3600';
+      rawParams.token_type = hashParams.get('token_type') || 'bearer';
+      rawParams.type = hashParams.get('type') || 'recovery';
+    }
+  }
   
-  // Check for direct access_token first (after successful Supabase redirect)
-  if (queryParams.get('access_token')) {
+  // Check for direct access_token in query params (after successful Supabase redirect)
+  if (!rawParams.access_token && queryParams.get('access_token')) {
     console.log('📋 Using standard format (access_token found)');
     rawParams.access_token = queryParams.get('access_token');
     rawParams.refresh_token = queryParams.get('refresh_token');
@@ -109,7 +127,7 @@ export const validateResetQuery = (queryParams: URLSearchParams): PasswordResetQ
     rawParams.type = queryParams.get('type');
   }
   // Check for token parameter (some Supabase configurations)
-  else if (queryParams.get('token')) {
+  else if (!rawParams.access_token && queryParams.get('token')) {
     console.log('📋 Using token parameter format');
     const token = queryParams.get('token');
     rawParams.access_token = token;
@@ -119,7 +137,7 @@ export const validateResetQuery = (queryParams: URLSearchParams): PasswordResetQ
     rawParams.type = queryParams.get('type') || 'recovery';
   }
   // Legacy format (direct token hash)
-  else {
+  else if (!rawParams.access_token) {
     console.log('📋 Checking for legacy format...');
     const tokenHash = Array.from(queryParams.keys()).find(key => 
       key.length > 20 && !['type', 'redirect_to'].includes(key)
@@ -132,10 +150,20 @@ export const validateResetQuery = (queryParams: URLSearchParams): PasswordResetQ
       rawParams.expires_in = '3600';
       rawParams.token_type = 'bearer';
       rawParams.type = queryParams.get('type') || 'recovery';
-    } else {
-      console.log('❌ No valid token format found');
-      console.log('🔍 Available keys:', Array.from(queryParams.keys()));
-      console.log('🔍 Keys with length > 20:', Array.from(queryParams.keys()).filter(key => key.length > 20));
+    }
+  }
+
+  // If still no tokens found, log detailed info
+  if (!rawParams.access_token) {
+    console.log('❌ No valid token format found');
+    console.log('🔍 Available query keys:', Array.from(queryParams.keys()));
+    console.log('🔍 Available hash keys:', window.location.hash ? Array.from(new URLSearchParams(window.location.hash.substring(1)).keys()) : []);
+    console.log('🔍 Keys with length > 20:', Array.from(queryParams.keys()).filter(key => key.length > 20));
+    console.log('🔍 Full current URL for debugging:', window.location.href);
+    
+    // Check if this might be a direct Supabase verification link
+    if (window.location.href.includes('supabase.co/auth/v1/verify')) {
+      console.log('🔍 This appears to be a Supabase verification URL - check your email template configuration');
     }
   }
 
@@ -150,6 +178,17 @@ export const validateResetQuery = (queryParams: URLSearchParams): PasswordResetQ
       message: issue.message,
       received: issue.code === 'invalid_type' ? (issue as any).received : undefined
     })));
+    
+    // Provide specific troubleshooting hints
+    if (!rawParams.access_token) {
+      console.error('💡 TROUBLESHOOTING: No access token found. This usually means:');
+      console.error('   1. Supabase Site URL doesn\'t match your app URL');
+      console.error('   2. Supabase Redirect URLs don\'t include /reset-password');
+      console.error('   3. Email template uses wrong URL format');
+      console.error('   Current URL:', window.location.href);
+      console.error('   Expected: Should contain access_token in URL or hash');
+    }
+    
     logWarn('Password reset: invalid query parameters');
     return null;
   }

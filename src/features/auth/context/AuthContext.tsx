@@ -229,8 +229,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         hostname: window.location.hostname
       });
       
-      // Use the current origin for redirects - this ensures consistency
-      const redirectUrl = `${window.location.origin}/reset-password`;
+      // Use parscade.com as the primary domain for redirects
+      const redirectUrl = window.location.hostname === 'localhost' 
+        ? `${window.location.origin}/reset-password`
+        : 'https://parscade.com/reset-password';
       
       console.log('🔗 Using redirect URL:', redirectUrl);
       
@@ -247,6 +249,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           code: 'code' in error ? error.code : 'N/A',
           details: 'details' in error ? error.details : 'N/A'
         });
+        
+        // Add specific troubleshooting for 500 errors
+        if ('status' in error && error.status === 500) {
+          console.error('💡 500 ERROR TROUBLESHOOTING:');
+          console.error('   1. Check your Supabase email template uses {{ .ConfirmationURL }}');
+          console.error('   2. Verify SMTP configuration in Supabase');
+          console.error('   3. Ensure Site URL matches your domain exactly');
+        }
+        
         throw new Error(getPasswordResetErrorMessage(error));
       }
       

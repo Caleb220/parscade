@@ -59,16 +59,21 @@ const ResetPasswordPage: React.FC = () => {
     const initializeResetFlow = async (): Promise<void> => {
       try {
         console.log('🔄 Initializing reset flow...');
+        console.log('🔍 Full URL:', window.location.href);
         console.log('🔍 Search params:', Object.fromEntries(searchParams.entries()));
+        console.log('🔍 URL Hash:', window.location.hash);
         
         // Validate query parameters
         const resetQuery = validateResetQuery(searchParams);
         if (!resetQuery) {
           console.error('❌ Invalid query parameters');
+          console.error('🔍 Current URL for debugging:', window.location.href);
+          console.error('🔍 Expected URL format should include access_token');
+          
           setState(prev => ({
             ...prev,
             isLoading: false,
-            error: 'Invalid or expired password reset link. Please request a new one.',
+            error: 'No reset token found in URL. This usually indicates a Supabase configuration issue. Please check your email template and Site URL settings.',
           }));
           return;
         }
