@@ -114,12 +114,12 @@ serve(async (req) => {
           <div style="margin-top: 20px; padding: 15px; background-color: #eff6ff; border-radius: 8px; font-size: 12px; color: #1e40af;">
             <table style="width: 100%; border-collapse: collapse;">
               <tr>
-                <td style="font-weight: bold; padding: 2px 0;">Sent from:</td>
-                <td style="padding: 2px 0;">Parscade Contact Form</td>
+                <td style="font-weight: bold; padding: 2px 0; color: #000000;">Sent from:</td>
+                <td style="padding: 2px 0; color: #000000;">Parscade Contact Form</td>
               </tr>
               <tr>
-                <td style="font-weight: bold; padding: 2px 0;">Timestamp:</td>
-                <td style="padding: 2px 0;">${new Date().toLocaleString('en-US', { 
+                <td style="font-weight: bold; padding: 2px 0; color: #000000;">Timestamp:</td>
+                <td style="padding: 2px 0; color: #000000;">${new Date().toLocaleString('en-US', { 
                   timeZone: 'America/Los_Angeles',
                   year: 'numeric',
                   month: 'long', 
@@ -130,8 +130,8 @@ serve(async (req) => {
                 })}</td>
               </tr>
               <tr>
-                <td style="font-weight: bold; padding: 2px 0;">IP Address:</td>
-                <td style="padding: 2px 0;">${req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'Unknown'}</td>
+                <td style="font-weight: bold; padding: 2px 0; color: #000000;">IP Address:</td>
+                <td style="padding: 2px 0; color: #000000;">${req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'Unknown'}</td>
               </tr>
             </table>
           </div>
