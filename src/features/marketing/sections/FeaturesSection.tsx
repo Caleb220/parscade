@@ -12,6 +12,7 @@ import {
   Globe
 } from 'lucide-react';
 import FeatureCard from '../../../components/molecules/FeatureCard';
+import Button from '../../../components/atoms/Button';
 import { useAuth } from '../../auth';
 import { useNavigate } from 'react-router-dom';
 
