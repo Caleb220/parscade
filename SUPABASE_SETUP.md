@@ -1,8 +1,27 @@
+### **Go to Authentication → Email Templates → Reset Password**
 # Supabase Reset Password Setup Guide
+**Replace this line:**
+```html
+<a href="{{ .SiteURL }}/reset-password?{{ .TokenHash }}&type=recovery">
+```
 
+**With this:**
+```html
+<a href="{{ .ConfirmationURL }}">
+```
 This guide covers all the Supabase configuration needed for the reset password functionality to work properly.
+The `{{ .ConfirmationURL }}` variable contains the complete, properly formatted reset URL with all the required tokens.
 
+### **Alternative Method** 
+If you prefer to customize the redirect URL, use:
+```html
+<a href="{{ .SiteURL }}/reset-password?{{ .Token }}&type=recovery">
+```
 ## 1. Authentication Settings
+**After updating the template:**
+1. Save the changes in Supabase
+2. Test the forgot password flow again
+3. The new email should have a properly formatted URL
 
 ### Navigate to Authentication → Settings in your Supabase Dashboard
 
@@ -38,7 +57,7 @@ https://preview.your-domain.com/reset-password
 
 #### A. Reset Password Template
 1. Click on **"Reset Password"** template
-2. Update the template with professional styling:
+2. **IMPORTANT**: Update the reset link URL to use the correct Supabase variables:
 
 ```html
 <h2>Reset Your Password</h2>
@@ -47,7 +66,7 @@ https://preview.your-domain.com/reset-password
 
 <p>You recently requested to reset your password for your Parscade account. Click the button below to reset it.</p>
 
-<p><a href="{{ .SiteURL }}/reset-password?{{ .TokenHash }}&type=recovery" 
+<p><a href="{{ .ConfirmationURL }}" 
    style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
    Reset Your Password
 </a></p>
@@ -62,7 +81,7 @@ The Parscade Team</p>
 <hr>
 <p style="font-size: 12px; color: #666;">
 If the button above doesn't work, copy and paste this link into your browser:<br>
-{{ .SiteURL }}/reset-password?{{ .TokenHash }}&type=recovery
+{{ .ConfirmationURL }}
 </p>
 ```
 
@@ -228,7 +247,9 @@ Before going live:
 - Error rates and types
 
 ### Regular maintenance:
+## URGENT: Fix Your Email Template
 - Review failed reset attempts
 - Update email templates as needed
+The 404 error you're experiencing is because the email template is using the wrong URL format. You need to update your Supabase email template:
 - Monitor for suspicious activity
 - Update security settings as requirements change

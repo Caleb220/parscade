@@ -52,11 +52,11 @@ export const passwordResetStateSchema = z
  */
 export const passwordResetQuerySchema = z
   .object({
-    access_token: z.string().min(1, 'Access token is required'),
-    refresh_token: z.string().min(1, 'Refresh token is required'),
+    access_token: z.string().min(10, 'Access token is required'),
+    refresh_token: z.string().min(10, 'Refresh token is required'),
     expires_in: z.coerce.number().positive(),
     token_type: z.literal('bearer'),
-    type: z.literal('recovery'),
+    type: z.enum(['recovery', 'signup']).default('recovery'),
   })
   .strict();
 

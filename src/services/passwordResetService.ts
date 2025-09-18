@@ -94,20 +94,43 @@ const rateLimiter = new PasswordResetRateLimiter();
  * @returns Validated query parameters or null if invalid
  */
 export const validateResetQuery = (queryParams: URLSearchParams): PasswordResetQuery | null => {
-  const rawParams = {
-    access_token: queryParams.get('access_token'),
-    refresh_token: queryParams.get('refresh_token'),
-    expires_in: queryParams.get('expires_in'),
-    token_type: queryParams.get('token_type'),
-    type: queryParams.get('type'),
-  };
+  // Handle both new and legacy URL formats from Supabase
+  const rawParams: any = {};
+  
+  // New format (standard Supabase auth URLs)
+  if (queryParams.get('access_token')) {
+    rawParams.access_token = queryParams.get('access_token');
+    rawParams.refresh_token = queryParams.get('refresh_token');
+    rawParams.expires_in = queryParams.get('expires_in');
+    rawParams.token_type = queryParams.get('token_type');
+    rawParams.type = queryParams.get('type');
+  } 
+  // Legacy format (direct token hash)
+  else {
+    const tokenHash = Array.from(queryParams.keys()).find(key => 
+      key.length > 20 && !['type', 'redirect_to'].includes(key)
+    );
+    
+    if (tokenHash) {
+      rawParams.access_token = tokenHash;
+      rawParams.refresh_token = tokenHash; // Use same token for both
+      rawParams.expires_in = '3600';
+      rawParams.token_type = 'bearer';
+      rawParams.type = queryParams.get('type') || 'recovery';
+    }
+  }
+
+  console.log('🔍 Parsing query params:', Object.fromEntries(queryParams.entries()));
+  console.log('🔍 Raw params for validation:', rawParams);
 
   const result = passwordResetQuerySchema.safeParse(rawParams);
   if (!result.success) {
+    console.error('❌ Query validation failed:', result.error.issues);
     logWarn('Password reset: invalid query parameters');
     return null;
   }
 
+  console.log('✅ Query validation successful');
   return result.data;
 };
 
