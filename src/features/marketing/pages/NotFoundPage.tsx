@@ -77,7 +77,7 @@ const NotFoundPage: React.FC = () => {
                 variant="ghost"
                 size="sm"
                 leftIcon={<Mail className="w-4 h-4" />}
-                onClick={() => window.location.replace = 'mailto:support@parscade.com'}
+                onClick={() => window.location.assign('mailto:admin@parscade.com')}
               >
                 Contact Support
               </Button>

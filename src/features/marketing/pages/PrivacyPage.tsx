@@ -171,7 +171,7 @@ const PrivacyPage: React.FC = () => {
               Questions about privacy? We're here to help:
             </p>
             <ul className="text-gray-600 mb-8">
-              <li>Email: privacy@parscade.com</li>
+              <li>Email: admin@parscade.com</li>
               <li>Contact form: Available on our contact page</li>
               <li>Response time: Within 48 hours for privacy inquiries</li>
             </ul>

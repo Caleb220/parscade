@@ -32,7 +32,7 @@ const Footer: React.FC = () => {
     { icon: Twitter, href: 'https://twitter.com/parscade', label: 'Twitter' },
     { icon: Github, href: 'https://github.com/parscade', label: 'GitHub' },
     { icon: Linkedin, href: 'https://linkedin.com/company/parscade', label: 'LinkedIn' },
-    { icon: Mail, href: 'mailto:hello@parscade.com', label: 'Email' },
+    { icon: Mail, href: 'mailto:admin@parscade.com', label: 'Email' },
   ];
 
   return (

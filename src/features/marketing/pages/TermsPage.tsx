@@ -192,7 +192,7 @@ const TermsPage: React.FC = () => {
               Questions about these terms? Contact us:
             </p>
             <ul className="text-gray-600 mb-8">
-              <li>Email: legal@parscade.com</li>
+              <li>Email: admin@parscade.com</li>
               <li>Contact form: Available on our contact page</li>
               <li>Response time: Within 5 business days</li>
             </ul>

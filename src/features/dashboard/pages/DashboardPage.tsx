@@ -87,7 +87,7 @@ const DashboardPage: React.FC = () => {
               <div className="mt-8 border-t border-gray-200 pt-6">
                 <p className="text-sm text-gray-500">
                   Need help?{' '}
-                  <a href="mailto:support@parscade.com" className="text-blue-600 hover:text-blue-700">
+                  <a href="mailto:admin@parscade.com" className="text-blue-600 hover:text-blue-700">
                     Contact Support
                   </a>
                 </p>

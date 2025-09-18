@@ -22,7 +22,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({ error, resetError }) => {
   };
 
   const handleReportIssue = () => {
-    window.location.assign('mailto:support@parscade.com?subject=Error Report #P500');
+    window.location.assign('mailto:admin@parscade.com?subject=Error Report #P500');
   };
 
   const page = (
