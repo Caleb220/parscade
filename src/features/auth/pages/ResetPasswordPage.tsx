@@ -208,7 +208,7 @@ const ResetPasswordPage: React.FC = () => {
       if (inRecoveryMode) {
         // In recovery mode: complete the flow properly
         setTimeout(async () => {
-          await completeRecoveryFlow(false); // Keep user logged in
+          await completeRecoveryFlow(true); // Sign out and redirect to home
         }, 2000);
       } else {
         // Normal flow: redirect to home

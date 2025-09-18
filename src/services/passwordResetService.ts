@@ -345,8 +345,13 @@ export const completeRecoveryFlow = async (redirectToLogin = false): Promise<voi
         window.location.href = '/';
       }, 500);
     } else {
-      // User-friendly: keep them logged in and go to dashboard
-      window.location.href = '/dashboard';
+      // User-friendly: sign out and redirect to home page for fresh login
+      await secureSignOut();
+      
+      // Small delay to ensure signout completes
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 500);
     }
   } catch (error) {
     logger.error('Error completing recovery flow', {
