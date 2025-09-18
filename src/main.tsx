@@ -13,7 +13,6 @@ if (import.meta.env.DEV || import.meta.env.VITE_SENTRY_DEBUG === 'true') {
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN || 
   (import.meta.env.PROD 
     ? 'http://3a277508b33447ba9f4f97d01a95498b@sentry-logging.cdubz-hub.com/2'
-  )
     : undefined);
 
 console.info('🚀 Parscade application starting', {
