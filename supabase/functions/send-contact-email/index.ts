@@ -162,19 +162,25 @@ IP Address: ${req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
       `,
     }
 
-    // Send email
-    await transporter.sendMail(mailOptions)
-
-    return new Response(
+    // Send immediate response to user
+    const response = new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Email sent successfully' 
+        message: 'Message received! We\'ll get back to you within 24 hours.' 
       }),
       { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     )
+
+    // Send email in background (don't await)
+    transporter.sendMail(mailOptions).catch((emailError) => {
+      console.error('Background email sending failed:', emailError)
+      // Could implement retry logic or dead letter queue here
+    })
+
+    return response
 
   } catch (error) {
     console.error('Error sending email:', error)

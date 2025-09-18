@@ -66,11 +66,11 @@ const ContactPage: React.FC = () => {
             </div>
             
             <h1 className="text-2xl font-bold text-gray-900 mb-4">
-              Message Sent Successfully!
+              Message Received!
             </h1>
             
             <p className="text-gray-600 mb-6">
-              Thank you for contacting us. We'll get back to you within 24 hours.
+              Thank you for reaching out! We've received your message and will get back to you within 24 hours.
             </p>
             
             <Button
