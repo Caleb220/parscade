@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Mail, CheckCircle, AlertCircle, ArrowLeft, Bug } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../../../components/templates/Layout';
 import Button from '../../../components/atoms/Button';
@@ -23,6 +23,8 @@ const ForgotPasswordPage: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [attempts, setAttempts] = useState<number>(0);
+  const [debugInfo, setDebugInfo] = useState<string>('');
+  const [showDebug, setShowDebug] = useState<boolean>(process.env.NODE_ENV === 'development');
 
   /**
    * Validate email format.
@@ -59,6 +61,7 @@ const ForgotPasswordPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setAttempts(prev => prev + 1);
+    setDebugInfo(`Attempting reset for: ${trimmedEmail.toLowerCase()}`);
 
     try {
       await resetPassword(trimmedEmail);
@@ -66,14 +69,21 @@ const ForgotPasswordPage: React.FC = () => {
       // Track successful request
       trackFormSubmit('forgot-password', true);
       
+      setDebugInfo(prev => prev + '\n✅ Reset request sent successfully');
       setIsSuccess(true);
     } catch (resetError) {
       logWarn('Forgot password: reset request failed');
       
+      // Enhanced error logging for debugging
+      console.error('Reset password error details:', resetError);
+      setDebugInfo(prev => prev + `\n❌ Error: ${resetError instanceof Error ? resetError.message : 'Unknown error'}`);
+      
       // Track failed request
       trackFormSubmit('forgot-password', false);
       
-      setError(formatErrorForUser(resetError, 'Failed to send password reset email. Please try again.'));
+      const errorMessage = formatErrorForUser(resetError, 'Failed to send password reset email. Please try again.');
+      setError(errorMessage);
+      setDebugInfo(prev => prev + `\n🔍 User message: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -228,6 +238,39 @@ const ForgotPasswordPage: React.FC = () => {
               may not be associated with an account.
             </p>
           </div>
+
+          {/* Debug Information (Development Only) */}
+          {showDebug && debugInfo && (
+            <div className="mt-6 p-4 bg-gray-100 border border-gray-300 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700 flex items-center">
+                  <Bug className="w-4 h-4 mr-1" />
+                  Debug Info (Dev Only)
+                </span>
+                <button
+                  onClick={() => setShowDebug(false)}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                >
+                  Hide
+                </button>
+              </div>
+              <pre className="text-xs text-gray-600 whitespace-pre-wrap font-mono">
+                {debugInfo}
+              </pre>
+            </div>
+          )}
+
+          {/* Debug Toggle (Development Only) */}
+          {process.env.NODE_ENV === 'development' && !showDebug && (
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => setShowDebug(true)}
+                className="text-xs text-gray-500 hover:text-gray-700 underline"
+              >
+                Show Debug Info
+              </button>
+            </div>
+          )}
         </motion.div>
       </div>
     </Layout>

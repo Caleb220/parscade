@@ -222,14 +222,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const resetPassword = useCallback(async (email: string): Promise<void> => {
     try {
+      console.log('🔄 Attempting password reset for:', email.toLowerCase());
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
       if (error) {
+        console.error('❌ Supabase reset password error:', error);
         throw error;
       }
+      
+      console.log('✅ Password reset email request completed successfully');
     } catch (resetError) {
+      console.error('❌ Reset password function error:', resetError);
       const message = resetError instanceof AuthError
         ? getAuthErrorMessage(resetError)
         : 'Failed to send reset email';
