@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, CheckCircle, AlertCircle, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import Layout from '../../../components/templates/Layout';
 import RecoveryLayout from '../../../components/templates/RecoveryLayout';
 import Button from '../../../components/atoms/Button';
@@ -30,6 +31,7 @@ import { trackFormSubmit } from '../../../utils/analytics';
  */
 const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   
   // Component state
   const [formData, setFormData] = useState<PasswordResetForm>({
@@ -45,6 +47,7 @@ const ResetPasswordPage: React.FC = () => {
   const [isValidSession, setIsValidSession] = useState<boolean>(false);
   const [resetTokens, setResetTokens] = useState<PasswordResetQuery | null>(null);
   const [inRecoveryMode, setInRecoveryMode] = useState<boolean>(false);
+  const [isAutoLoggedIn, setIsAutoLoggedIn] = useState<boolean>(false);
   
   const [showPasswords, setShowPasswords] = useState({
     password: false,
@@ -58,7 +61,7 @@ const ResetPasswordPage: React.FC = () => {
   const recoveryModeRef = useRef<boolean | null>(null);
 
   /**
-   * Initialize password reset flow with secure token extraction.
+   * Initialize password reset flow with auto-login detection.
    */
   useEffect(() => {
     // Check if we're in recovery mode
@@ -80,10 +83,26 @@ const ResetPasswordPage: React.FC = () => {
           context: { feature: 'password-reset', action: 'initialization' },
         });
         
-        // Step 1: Extract tokens from URL BEFORE any signout operations
+        // Check if user is already authenticated from reset link (auto-login scenario)
+        if (isAuthenticated && user && !authLoading) {
+          logger.info('User auto-logged in from reset link', {
+            context: { feature: 'password-reset', action: 'autoLoginDetected' },
+            metadata: { userId: user.id, email: user.email },
+          });
+          
+          setIsAutoLoggedIn(true);
+          setIsValidSession(true);
+          setIsLoading(false);
+          return;
+        }
+        
+        // If not auto-logged in, try token-based flow
         const tokens = extractResetTokens();
         if (!tokens) {
-          setError('Invalid password reset link. Please request a new one.');
+          // If no tokens and not authenticated, this is an invalid reset link
+          if (!isAuthenticated) {
+            setError('Invalid password reset link. Please request a new one.');
+          }
           setIsLoading(false);
           return;
         }
@@ -91,10 +110,10 @@ const ResetPasswordPage: React.FC = () => {
         logger.debug('Reset tokens extracted successfully');
         setResetTokens(tokens);
         
-        // Step 3: Establish recovery session using extracted tokens
+        // Establish recovery session using extracted tokens
         await establishRecoverySession(tokens);
         
-        // Step 4: Mark session as valid
+        // Mark session as valid
         setIsValidSession(true);
         setIsLoading(false);
         setError(null);
@@ -114,8 +133,11 @@ const ResetPasswordPage: React.FC = () => {
       }
     };
 
-    void initializeResetFlow();
-  }, []);
+    // Only initialize if auth loading is complete
+    if (!authLoading) {
+      void initializeResetFlow();
+    }
+  }, [isAuthenticated, user, authLoading]);
 
   /**
    * Handle form input changes with real-time validation.
@@ -240,8 +262,8 @@ const ResetPasswordPage: React.FC = () => {
   // Choose layout based on recovery mode
   const LayoutComponent = inRecoveryMode ? RecoveryLayout : Layout;
 
-  // Loading state during token validation
-  if (isLoading) {
+  // Loading state during token validation or auth loading
+  if (isLoading || authLoading) {
     return (
       <LayoutComponent>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -252,10 +274,10 @@ const ResetPasswordPage: React.FC = () => {
           >
             <LoadingSpinner size="lg" className="mx-auto mb-6" />
             <h1 className="text-xl font-semibold text-gray-900 mb-2">
-              Validating Reset Link
+              {authLoading ? 'Loading...' : 'Validating Reset Link'}
             </h1>
             <p className="text-gray-600">
-              Please wait while we verify your password reset request.
+              {authLoading ? 'Checking authentication status...' : 'Please wait while we verify your password reset request.'}
             </p>
           </motion.div>
         </div>
@@ -263,8 +285,8 @@ const ResetPasswordPage: React.FC = () => {
     );
   }
 
-  // Error state for invalid tokens
-  if (!isValidSession && error) {
+  // Error state for invalid tokens (only show if not auto-logged in)
+  if (!isValidSession && !isAutoLoggedIn && error) {
     return (
       <LayoutComponent>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -329,26 +351,45 @@ const ResetPasswordPage: React.FC = () => {
               Password Updated Successfully!
             </h1>
             <p className="text-gray-600 mb-6">
-              Your password has been updated successfully. 
-              {inRecoveryMode ? ' Redirecting to your dashboard...' : ' Please sign in with your new password.'}
+              Your password has been updated successfully. Please sign in with your new password.
             </p>
-            {!inRecoveryMode && (
-              <Button
-                onClick={() => navigate('/')}
-                rightIcon={<ArrowRight className="w-4 h-4" />}
-                size="lg"
-                fullWidth
-              >
-                Sign In
-              </Button>
-            )}
+            <Button
+              onClick={() => navigate('/')}
+              rightIcon={<ArrowRight className="w-4 h-4" />}
+              size="lg"
+              fullWidth
+            >
+              Sign In
+            </Button>
           </motion.div>
         </div>
       </LayoutComponent>
     );
   }
 
-  // Main reset password form
+  // Main reset password form (show if valid session OR auto-logged in)
+  if (!isValidSession && !isAutoLoggedIn) {
+    return (
+      <LayoutComponent>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 max-w-md w-full text-center"
+          >
+            <LoadingSpinner size="lg" className="mx-auto mb-6" />
+            <h1 className="text-xl font-semibold text-gray-900 mb-2">
+              Preparing Reset Form
+            </h1>
+            <p className="text-gray-600">
+              Setting up your password reset form...
+            </p>
+          </motion.div>
+        </div>
+      </LayoutComponent>
+    );
+  }
+
   return (
     <LayoutComponent>
       <div className={`${inRecoveryMode ? '' : 'min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12'}`}>
@@ -357,6 +398,19 @@ const ResetPasswordPage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className={`bg-white rounded-2xl p-8 shadow-sm border border-gray-100 w-full ${inRecoveryMode ? '' : 'max-w-md'}`}
         >
+          {/* Auto-login notification */}
+          {isAutoLoggedIn && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-md"
+            >
+              <p className="text-sm text-blue-800">
+                <strong>Reset Link Verified:</strong> You can now set a new password for your account.
+              </p>
+            </motion.div>
+          )}
+
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Lock className="w-8 h-8 text-blue-600" />

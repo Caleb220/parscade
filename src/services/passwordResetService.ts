@@ -336,23 +336,13 @@ export const completeRecoveryFlow = async (redirectToLogin = false): Promise<voi
     // Clear URL fragments to prevent reuse
     window.history.replaceState({}, document.title, window.location.pathname);
 
-    if (redirectToLogin) {
-      // More secure: sign out and redirect to login
-      await secureSignOut();
-      
-      // Small delay to ensure signout completes
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 500);
-    } else {
-      // User-friendly: sign out and redirect to home page for fresh login
-      await secureSignOut();
-      
-      // Small delay to ensure signout completes
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 500);
-    }
+    // Always sign out and redirect to home for fresh login with new password
+    await secureSignOut();
+    
+    // Small delay to ensure signout completes
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 500);
   } catch (error) {
     logger.error('Error completing recovery flow', {
       context: { feature: 'password-reset', action: 'completeRecovery' },
