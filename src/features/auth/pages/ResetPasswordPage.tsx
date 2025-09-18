@@ -58,9 +58,13 @@ const ResetPasswordPage: React.FC = () => {
   useEffect(() => {
     const initializeResetFlow = async (): Promise<void> => {
       try {
+        console.log('🔄 Initializing reset flow...');
+        console.log('🔍 Search params:', Object.fromEntries(searchParams.entries()));
+        
         // Validate query parameters
         const resetQuery = validateResetQuery(searchParams);
         if (!resetQuery) {
+          console.error('❌ Invalid query parameters');
           setState(prev => ({
             ...prev,
             isLoading: false,
@@ -69,8 +73,13 @@ const ResetPasswordPage: React.FC = () => {
           return;
         }
 
+        console.log('✅ Query parameters validated');
+        console.log('🔄 Exchanging recovery session...');
+        
         // Exchange recovery session
         await exchangeRecoverySession(resetQuery);
+        
+        console.log('✅ Recovery session established');
         setIsValidSession(true);
         setState(prev => ({
           ...prev,
@@ -78,11 +87,30 @@ const ResetPasswordPage: React.FC = () => {
           error: null,
         }));
       } catch (error) {
+        console.error('❌ Reset password session initialization failed:', error);
         logWarn('Reset password: session initialization failed');
+        
+        // Enhanced error handling for different failure modes
+        let errorMessage = 'Failed to validate password reset link.';
+        
+        if (error instanceof Error) {
+          const message = error.message.toLowerCase();
+          
+          if (message.includes('expired') || message.includes('invalid')) {
+            errorMessage = 'This password reset link has expired or is invalid. Please request a new one.';
+          } else if (message.includes('session')) {
+            errorMessage = 'Unable to establish reset session. Please try the link again or request a new one.';
+          } else if (message.includes('token')) {
+            errorMessage = 'Invalid reset token. Please request a new password reset link.';
+          } else {
+            errorMessage = error.message;
+          }
+        }
+        
         setState(prev => ({
           ...prev,
           isLoading: false,
-          error: formatErrorForUser(error, 'Failed to validate password reset link.'),
+          error: errorMessage,
         }));
       }
     };

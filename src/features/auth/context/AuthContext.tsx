@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import type { AuthState, AuthContextType, User } from '../types/authTypes';
 import { supabase } from '../../../lib/supabase';
-import type { AuthError } from '@supabase/supabase-js';
+import type { AuthError, AuthApiError } from '@supabase/supabase-js';
 import { logWarn } from '../../../utils/log';
 import type { TypedSupabaseUser } from '../../../types/supabase';
 
@@ -230,15 +230,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (error) {
         console.error('❌ Supabase reset password error:', error);
-        throw error;
+        throw new Error(getPasswordResetErrorMessage(error));
       }
       
       console.log('✅ Password reset email request completed successfully');
     } catch (resetError) {
       console.error('❌ Reset password function error:', resetError);
-      const message = resetError instanceof AuthError
-        ? getAuthErrorMessage(resetError)
-        : 'Failed to send reset email';
+      const message = resetError instanceof Error 
+        ? resetError.message 
+        : 'Failed to send reset email. Please try again.';
       throw new Error(message);
     }
   }, []);
@@ -276,6 +276,54 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }), [state, signIn, signUp, signOut, resetPassword, resendConfirmationEmail, clearError]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+/**
+ * Converts Supabase password reset errors to user-friendly messages.
+ * 
+ * @param error - The AuthError from Supabase
+ * @returns User-friendly error message
+ */
+const getPasswordResetErrorMessage = (error: AuthError | AuthApiError): string => {
+  // Handle different error types
+  if ('status' in error && error.status) {
+    switch (error.status) {
+      case 429:
+        return 'Too many password reset requests. Please wait a few minutes before trying again.';
+      case 422:
+        return 'Invalid email address format. Please check and try again.';
+      case 400:
+        return 'Unable to send password reset email. Please verify your email address.';
+      default:
+        break;
+    }
+  }
+
+  // Handle specific error messages
+  const message = error.message?.toLowerCase() || '';
+  
+  if (message.includes('rate limit')) {
+    return 'Too many password reset requests. Please wait 5 minutes before trying again.';
+  }
+  
+  if (message.includes('email not confirmed')) {
+    return 'Please confirm your email address first, then try resetting your password.';
+  }
+  
+  if (message.includes('user not found')) {
+    return 'If an account with this email exists, you will receive a password reset link.';
+  }
+  
+  if (message.includes('invalid email')) {
+    return 'Please enter a valid email address.';
+  }
+  
+  if (message.includes('smtp') || message.includes('email')) {
+    return 'Unable to send password reset email. Please try again or contact support.';
+  }
+
+  // Generic fallback
+  return 'Unable to send password reset email. Please try again or contact support if the problem persists.';
 };
 
 /**

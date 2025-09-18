@@ -76,12 +76,30 @@ const ForgotPasswordPage: React.FC = () => {
       
       // Enhanced error logging for debugging
       console.error('Reset password error details:', resetError);
-      setDebugInfo(prev => prev + `\n❌ Error: ${resetError instanceof Error ? resetError.message : 'Unknown error'}`);
+      
+      // Enhanced debug information
+      const errorDetails = resetError instanceof Error 
+        ? {
+            name: resetError.name,
+            message: resetError.message,
+            stack: resetError.stack?.split('\n').slice(0, 3).join('\n')
+          }
+        : { error: 'Unknown error type', value: resetError };
+      
+      setDebugInfo(prev => prev + `\n❌ Error Details:\n${JSON.stringify(errorDetails, null, 2)}`);
       
       // Track failed request
       trackFormSubmit('forgot-password', false);
       
-      const errorMessage = formatErrorForUser(resetError, 'Failed to send password reset email. Please try again.');
+      // Enhanced error message handling
+      let errorMessage = 'Failed to send password reset email. Please try again.';
+      
+      if (resetError instanceof Error) {
+        errorMessage = resetError.message;
+      } else {
+        errorMessage = formatErrorForUser(resetError, 'Failed to send password reset email. Please try again.');
+      }
+      
       setError(errorMessage);
       setDebugInfo(prev => prev + `\n🔍 User message: ${errorMessage}`);
     } finally {
@@ -254,9 +272,25 @@ const ForgotPasswordPage: React.FC = () => {
                   Hide
                 </button>
               </div>
-              <pre className="text-xs text-gray-600 whitespace-pre-wrap font-mono">
+              <pre className="text-xs text-gray-600 whitespace-pre-wrap font-mono max-h-40 overflow-y-auto">
                 {debugInfo}
               </pre>
+              
+              {/* Quick Actions for Development */}
+              <div className="mt-3 pt-3 border-t border-gray-300 flex gap-2">
+                <button
+                  onClick={() => setDebugInfo('')}
+                  className="text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded"
+                >
+                  Clear Log
+                </button>
+                <button
+                  onClick={() => navigator.clipboard.writeText(debugInfo)}
+                  className="text-xs px-2 py-1 bg-blue-100 hover:bg-blue-200 rounded"
+                >
+                  Copy Log
+                </button>
+              </div>
             </div>
           )}
 
