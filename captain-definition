@@ -1,28 +1,4 @@
 {
   "schemaVersion": 2,
   "dockerfilePath": "./Dockerfile",
-  "dockerfileLines": [
-    "# Sentry Relay Configuration",
-    "FROM getsentry/relay:latest",
-    "",
-    "# Copy configuration",
-    "COPY relay-config.yml /etc/relay/config.yml",
-    "",
-    "# Create credentials directory",
-    "RUN mkdir -p /var/lib/relay",
-    "",
-    "# Set proper permissions",
-    "RUN chown -R relay:relay /var/lib/relay",
-    "RUN chown -R relay:relay /etc/relay",
-    "",
-    "# Expose port",
-    "EXPOSE 3000",
-    "",
-    "# Health check",
-    "HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \\",
-    "  CMD curl -f http://localhost:3000/api/relay/healthcheck/ready/ || exit 1",
-    "",
-    "# Start relay",
-    "CMD [\"relay\", \"run\", \"--config\", \"/etc/relay/config.yml\"]"
-  ]
 }
