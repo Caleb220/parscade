@@ -33,19 +33,6 @@ const ResetPasswordPage: React.FC = () => {
   // Component state
   const [formData, setFormData] = useState<PasswordResetForm>({
     password: '',
-      // Check if user was automatically logged in from reset link
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        console.log('✅ User automatically logged in from reset link');
-        setIsValidSession(true);
-        setState(prev => ({
-          ...prev,
-          isLoading: false,
-          error: null,
-        }));
-        return;
-      }
-      
     confirmPassword: '',
   });
   
@@ -76,6 +63,19 @@ const ResetPasswordPage: React.FC = () => {
         console.log('🔍 Full URL:', window.location.href);
         console.log('🔍 Search params:', Object.fromEntries(searchParams.entries()));
         console.log('🔍 URL Hash:', window.location.hash);
+        
+        // Check if user was automatically logged in from reset link
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          console.log('✅ User automatically logged in from reset link');
+          setIsValidSession(true);
+          setState(prev => ({
+            ...prev,
+            isLoading: false,
+            error: null,
+          }));
+          return;
+        }
         
         // Validate query parameters
         const resetQuery = validateResetQuery(searchParams);
