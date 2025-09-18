@@ -344,20 +344,17 @@ const ProductPage: React.FC = () => {
               Join our beta program and be among the first to experience next-generation document processing.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
+              <button
                 onClick={handleJoinBetaClick}
-                className="bg-white text-blue-600 hover:bg-gray-50"
+                className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-50 transition-colors duration-200 shadow-lg"
               >
                 {isAuthenticated ? 'Go to Dashboard' : 'Join Beta Program'}
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="border-white text-white hover:bg-white hover:text-blue-600"
+              </button>
+              <button
+                className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-blue-600 transition-colors duration-200"
               >
                 {isAuthenticated ? 'View Features' : 'Request Access'}
-              </Button>
+              </button>
             </div>
           </motion.div>
         </div>
