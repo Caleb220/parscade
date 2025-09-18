@@ -105,7 +105,7 @@ class PinoLogger {
 
     // Browser-compatible console transport
     if (isBrowser) {
-      this.logger = pino(baseConfig, pino.destination(1)); // stdout
+      this.logger = pino(baseConfig); // Browser console default
       this.isInitialized = true;
     } else {
       // Console transport for Node.js environments
