@@ -20,6 +20,7 @@ import { validatePassword } from '../../../utils/passwordValidation';
 import { formatErrorForUser } from '../../../utils/zodError';
 import { logWarn } from '../../../utils/log';
 import { trackFormSubmit } from '../../../utils/analytics';
+import { supabase } from '../../../lib/supabase';
 
 /**
  * Enterprise-grade Reset Password page component.
@@ -32,6 +33,19 @@ const ResetPasswordPage: React.FC = () => {
   // Component state
   const [formData, setFormData] = useState<PasswordResetForm>({
     password: '',
+      // Check if user was automatically logged in from reset link
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        console.log('✅ User automatically logged in from reset link');
+        setIsValidSession(true);
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: null,
+        }));
+        return;
+      }
+      
     confirmPassword: '',
   });
   

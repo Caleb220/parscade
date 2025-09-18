@@ -318,6 +318,14 @@ export const updateUserPassword = async (
     // Record attempt for rate limiting
     rateLimiter.recordAttempt(sessionId);
 
+    // Check if user has an active session (from auto-login reset link)
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('No active session found. Please request a new password reset link.');
+    }
+
+    console.log('🔄 Updating password for authenticated user');
+    
     // Update password via Supabase
     const { error } = await supabase.auth.updateUser({
       password: password,
@@ -332,7 +340,7 @@ export const updateUserPassword = async (
       );
     }
 
-    logWarn('Password reset: password updated successfully');
+    console.log('✅ Password updated successfully');
   } catch (err) {
     logError('Password reset: update operation failed');
     
