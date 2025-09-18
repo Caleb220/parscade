@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import type { FC } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
-import { AuthProvider } from './features/auth';
+import { AuthProvider, ResetPasswordPage, ForgotPasswordPage } from './features/auth';
 import ErrorBoundary from './components/molecules/ErrorBoundary';
 import HomePage from './features/marketing/pages/HomePage';
 import ProductPage from './features/marketing/pages/ProductPage';
@@ -74,6 +74,14 @@ const RouteHandler: FC = () => {
         title: 'Parscade',
         description: 'An unexpected error occurred.',
       },
+      '/reset-password': {
+        title: 'Parscade - Reset Password',
+        description: 'Set a new password for your Parscade account.',
+      },
+      '/forgot-password': {
+        title: 'Parscade - Forgot Password',
+        description: 'Request a password reset link for your Parscade account.',
+      },
     } as const;
 
     const currentRoute = routeSEO[location.pathname];
@@ -99,6 +107,8 @@ const RouteHandler: FC = () => {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/404" element={<NotFoundPage />} />
         <Route path="/error" element={<ErrorPage />} />
         <Route path="*" element={<NotFoundPage />} />
