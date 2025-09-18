@@ -5,8 +5,8 @@ export const validatePassword = (password: string): PasswordStrength => {
   let score = 0;
 
   // Length check
-  if (password.length < 12) {
-    feedback.push('At least 12 characters required');
+  if (password.length < 8) {
+    feedback.push('At least 8 characters required');
   } else {
     score += 1;
   }

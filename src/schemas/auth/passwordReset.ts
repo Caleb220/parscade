@@ -11,14 +11,14 @@ import {
 export const passwordResetFormSchema = z
   .object({
     password: nonEmptyTextSchema('New password', 128)
-      .min(12, 'Password must be at least 12 characters long')
+      .min(8, 'Password must be at least 8 characters long')
       .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
       .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
       .regex(/\d/, 'Password must contain at least one number')
       .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/, 'Password must contain at least one special character')
       .regex(/^(?!.*(.)\1{2,})/, 'Password cannot contain more than 2 consecutive identical characters')
       .refine(
-        (password) => !/123|abc|qwe|password|admin|user|test/i.test(password),
+        (password) => !/123|abc|qwe|password|admin|user|test|12345678/i.test(password),
         'Password cannot contain common patterns or dictionary words'
       ),
     confirmPassword: nonEmptyTextSchema('Confirm password', 128),

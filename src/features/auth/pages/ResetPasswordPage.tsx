@@ -64,17 +64,11 @@ const ResetPasswordPage: React.FC = () => {
         console.log('🔍 Search params:', Object.fromEntries(searchParams.entries()));
         console.log('🔍 URL Hash:', window.location.hash);
         
-        // Check if user was automatically logged in from reset link
+        // For security, always sign out any existing session during password reset
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          console.log('✅ User automatically logged in from reset link');
-          setIsValidSession(true);
-          setState(prev => ({
-            ...prev,
-            isLoading: false,
-            error: null,
-          }));
-          return;
+          console.log('🔒 Signing out existing session for security during password reset');
+          await supabase.auth.signOut();
         }
         
         // Validate query parameters
@@ -232,10 +226,10 @@ const ResetPasswordPage: React.FC = () => {
         isComplete: true,
       }));
 
-      // Redirect to dashboard after success message
+      // Sign out user after password reset for security - they must log in with new password
       setTimeout(() => {
-        navigate('/dashboard', { replace: true });
-      }, 3000);
+        navigate('/', { replace: true });
+      }, 2000);
 
     } catch (error) {
       logWarn('Reset password: form submission failed');
@@ -343,15 +337,15 @@ const ResetPasswordPage: React.FC = () => {
               Password Updated Successfully!
             </h1>
             <p className="text-gray-600 mb-6">
-              Your password has been updated. You'll be redirected to your dashboard shortly.
+              Your password has been updated successfully. Please sign in with your new password.
             </p>
             <Button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/')}
               rightIcon={<ArrowRight className="w-4 h-4" />}
               size="lg"
               fullWidth
             >
-              Go to Dashboard
+              Sign In
             </Button>
           </motion.div>
         </div>

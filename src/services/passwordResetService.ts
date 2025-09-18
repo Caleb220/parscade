@@ -363,7 +363,7 @@ const getPasswordUpdateErrorMessage = (error: AuthError | AuthApiError): string 
   
   // Handle specific error patterns
   if (message.includes('password should be at least')) {
-    return 'Password must be at least 12 characters long for security.';
+    return 'Password must be at least 8 characters long for security.';
   }
   
   if (message.includes('auth session missing') || message.includes('session')) {
@@ -395,7 +395,8 @@ const getPasswordUpdateErrorMessage = (error: AuthError | AuthApiError): string 
   // Legacy message handling for backward compatibility
   switch (error.message) {
     case 'Password should be at least 6 characters':
-      return 'Password must be at least 12 characters long for security.';
+    case 'Password should be at least 8 characters':
+      return 'Password must be at least 8 characters long for security.';
     case 'Auth session missing!':
       return 'Your password reset link has expired. Please request a new one.';
     case 'Invalid recovery token':
