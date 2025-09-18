@@ -70,9 +70,6 @@ const ResetPasswordPage: React.FC = () => {
         console.log('✅ Reset tokens extracted successfully');
         setResetTokens(tokens);
         
-        // Step 2: Sign out any existing session for security
-        await secureSignOut();
-        
         // Step 3: Establish recovery session using extracted tokens
         await establishRecoverySession(tokens);
         

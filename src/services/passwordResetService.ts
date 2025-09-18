@@ -159,9 +159,6 @@ export const establishRecoverySession = async (tokens: PasswordResetQuery): Prom
       type: tokens.type
     });
     
-    // Add a small delay to ensure signout is complete
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
     const { error } = await supabase.auth.setSession({
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,

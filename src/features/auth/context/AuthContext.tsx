@@ -204,36 +204,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const signOut = useCallback(async (): Promise<void> => {
+    console.log('🔄 Starting logout process...');
+    
     // Update UI immediately for smooth user experience
     dispatch({ type: 'AUTH_SIGNOUT' });
+    console.log('✅ UI updated - user appears logged out');
     
-    // Handle Supabase signout in background
+    // Comprehensive session cleanup
     try {
-      console.log('🔄 Signing out user...');
+      console.log('🔄 Signing out from Supabase...');
       const { error } = await supabase.auth.signOut();
       if (error) {
-        // Log error but don't throw - UI is already updated
-        console.warn('⚠️ Supabase signout warning:', error.message);
-        logWarn('Auth: signout completed with warning');
+        console.warn('⚠️ Supabase signout warning:', error);
+        logWarn('Auth: supabase signout warning');
       } else {
         console.log('✅ Supabase signout completed successfully');
       }
+      
+      // Clear all local storage items related to auth
+      console.log('🔄 Clearing local storage...');
+      const keysToRemove = Object.keys(localStorage).filter(key => 
+        key.includes('supabase') || 
+        key.includes('auth') || 
+        key.includes('token') ||
+        key.includes('session')
+      );
+      
+      keysToRemove.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (storageError) {
+          console.warn('⚠️ Could not clear localStorage item:', key, storageError);
+        }
+      });
+      
+      console.log('✅ Cleared', keysToRemove.length, 'localStorage items');
+      
     } catch (signOutError) {
-      // Log error but don't throw or revert UI state - user is already signed out in UI
       console.warn('⚠️ Background signout error:', signOutError);
       logWarn('Auth: background signout error occurred');
     }
     
-    // Clear any cached data or perform cleanup asynchronously
-    setTimeout(() => {
-      // Clear localStorage items if any
-      try {
-        localStorage.removeItem('supabase.auth.token');
-        // Clear other app-specific cache if needed
-      } catch (cleanupError) {
-        console.warn('⚠️ Cache cleanup warning:', cleanupError);
-      }
-    }, 100);
+    console.log('✅ Logout process completed');
   }, []);
 
   const resetPassword = useCallback(async (email: string): Promise<void> => {
