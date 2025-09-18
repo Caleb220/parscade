@@ -92,6 +92,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) =>
 
     if (!validateForm()) return;
 
+    // Clear any existing errors before attempting auth
+    setFormErrors({});
+    clearError();
+
     try {
       if (mode === 'signin') {
         await signIn(formData.email, formData.password);
@@ -106,13 +110,12 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) =>
       // Increment attempt count on failure
       setAttemptCount((prev) => prev + 1);
 
-      // Surface generic error if none present
-      if (!error) {
-        setFormErrors((prev) => ({
-          ...prev,
-          general: 'Authentication failed. Please review your details and try again.',
-        }));
-      }
+      // Always show error message from auth context or fallback
+      const errorMessage = error || 'Authentication failed. Please review your details and try again.';
+      setFormErrors((prev) => ({
+        ...prev,
+        general: errorMessage,
+      }));
     }
   };
 

@@ -162,14 +162,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             isEmailConfirmed,
           },
         });
+        
+        // Set user context in Sentry
+        logger.setUserContext({
+          id: typedUser.id,
+          email: typedUser.email || undefined,
+          username: typedUser.user_metadata?.full_name || undefined,
+        });
       }
-      
-      // Set user context in Sentry
-      logger.setUserContext({
-        id: typedUser.id,
-        email: typedUser.email || undefined,
-        username: typedUser.user_metadata?.full_name || undefined,
-      });
     } catch (authError) {
       const message = authError instanceof AuthError
         ? getAuthErrorMessage(authError)
@@ -206,14 +206,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             isEmailConfirmed,
           },
         });
+        
+        // Set user context in Sentry
+        logger.setUserContext({
+          id: typedUser.id,
+          email: typedUser.email || undefined,
+          username: typedUser.user_metadata?.full_name || undefined,
+        });
       }
-      
-      // Set user context in Sentry
-      logger.setUserContext({
-        id: typedUser.id,
-        email: typedUser.email || undefined,
-        username: typedUser.user_metadata?.full_name || undefined,
-      });
     } catch (signUpError) {
       const message = signUpError instanceof AuthError
         ? getAuthErrorMessage(signUpError)
