@@ -325,6 +325,8 @@ class PinoLogger {
    * Log debug message (development only).
    */
   debug(message: string, options?: { context?: LogContext; metadata?: Record<string, unknown> }): void {
+    if (!this.isDevelopment) return;
+    
     const logData = {
       ...sanitizeLogData(options?.context),
       ...sanitizeLogData(options?.metadata),

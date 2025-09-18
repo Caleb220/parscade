@@ -68,7 +68,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) =>
     } else if (mode === 'signup') {
       const passwordValidation = validatePassword(formData.password);
       if (!passwordValidation.isValid) {
-        errors.password = 'Password does not meet security requirements';
+        errors.password = passwordValidation.feedback[0] || 'Password does not meet security requirements';
       }
     }
 

@@ -5,7 +5,6 @@ import Layout from '../../../components/templates/Layout';
 import HeroSection from '../sections/HeroSection';
 import FeaturesSection from '../sections/FeaturesSection';
 import { AuthModal } from '../../auth';
-import { ensureIntersectionObserver } from '../../../global/intersectionObserver';
 
 const PipelineCarousel = React.lazy(() => import('../components/PipelineCarousel'));
 
@@ -14,8 +13,6 @@ const HomePage: React.FC = () => {
   const [authModalOpen, setAuthModalOpen] = React.useState<boolean>(false);
 
   useEffect(() => {
-    ensureIntersectionObserver();
-    
     // Check if we should open the auth modal (e.g., from ProductPage redirect)
     if (location.state?.openAuthModal === true) {
       setAuthModalOpen(true);
