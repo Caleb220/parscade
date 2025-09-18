@@ -1,5 +1,4 @@
 import pino from 'pino';
-import pinoElastic from 'pino-elasticsearch';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 
@@ -14,6 +13,11 @@ export interface LogContext {
   readonly route?: string;
   readonly metadata?: Record<string, unknown>;
 }
+
+/**
+ * Check if we're running in a browser environment
+ */
+const isBrowser = typeof window !== 'undefined' && typeof document !== 'undefined';
 
 /**
  * Sanitizes sensitive data from log objects before sending to Elasticsearch.
@@ -61,25 +65,30 @@ const sanitizeLogData = (data: any): any => {
 };
 
 /**
- * Enhanced Pino logger with Elasticsearch transport and console fallback.
+ * Enhanced Pino logger with conditional Elasticsearch transport and console fallback.
  */
 class PinoLogger {
   private logger: pino.Logger;
   private elasticTransport: any = null;
   private isElasticConnected = false;
   private isDevelopment: boolean;
+  private isInitialized = false;
+  private pendingContext: Record<string, any> = {};
 
   constructor() {
     this.isDevelopment = import.meta.env?.MODE === 'development';
-    this.setupLogger();
+    this.setupBasicLogger();
+    
+    // Initialize async setup for non-browser environments
+    if (!isBrowser) {
+      this.setupAdvancedLogger().catch(error => {
+        console.warn('[Logger] Advanced setup failed, continuing with console-only logging:', error.message);
+      });
+    }
   }
 
-  private setupLogger(): void {
-    const elasticUrl = import.meta.env?.VITE_ELASTIC_URL || 
-                      import.meta.env?.ELASTIC_URL || 
-                      'https://elastic-search.cdubz-hub.com';
-
-    // Base logger configuration
+  private setupBasicLogger(): void {
+    // Base logger configuration that works in all environments
     const baseConfig: pino.LoggerOptions = {
       level: this.isDevelopment ? 'debug' : 'info',
       base: {
@@ -94,67 +103,128 @@ class PinoLogger {
       },
     };
 
-    // Create transports array
-    const transports: any[] = [];
-
-    // Console transport (always available as fallback)
-    const consoleTransport = pino.transport({
-      target: 'pino-pretty',
-      level: this.isDevelopment ? 'debug' : 'warn', // Only errors/warnings in production console
-      options: {
-        colorize: this.isDevelopment,
-        translateTime: 'yyyy-mm-dd HH:MM:ss',
-        ignore: 'pid,hostname',
-        messageFormat: this.isDevelopment 
-          ? '{service}[{level}]: {msg}' 
-          : '{msg}',
-      },
-    });
-    transports.push(consoleTransport);
-
-    // Elasticsearch transport (with error handling)
-    try {
-      this.elasticTransport = pinoElastic({
-        index: 'app-logs',
-        node: elasticUrl,
-        'es-version': 7,
-        'flush-bytes': 1000,
-        'flush-interval': 5000,
-        consistency: false, // Don't wait for acknowledgment to prevent blocking
+    // Browser-compatible console transport
+    if (isBrowser) {
+      this.logger = pino(baseConfig, pino.destination(1)); // stdout
+      this.isInitialized = true;
+    } else {
+      // Console transport for Node.js environments
+      const consoleTransport = pino.transport({
+        target: 'pino-pretty',
+        level: this.isDevelopment ? 'debug' : 'warn',
+        options: {
+          colorize: this.isDevelopment,
+          translateTime: 'yyyy-mm-dd HH:MM:ss',
+          ignore: 'pid,hostname',
+          messageFormat: this.isDevelopment 
+            ? '{service}[{level}]: {msg}' 
+            : '{msg}',
+        },
       });
-
-      // Add error handling for Elasticsearch transport
-      this.elasticTransport.on('error', (error: Error) => {
-        this.isElasticConnected = false;
-        console.warn('[Logger] Elasticsearch transport error:', error.message);
-        console.warn('[Logger] Continuing with console-only logging');
-      });
-
-      this.elasticTransport.on('insertError', (error: Error) => {
-        console.warn('[Logger] Failed to insert log into Elasticsearch:', error.message);
-      });
-
-      this.elasticTransport.on('insert', () => {
-        if (!this.isElasticConnected) {
-          this.isElasticConnected = true;
-          console.info('[Logger] ✅ Connected to Elasticsearch successfully');
-        }
-      });
-
-      transports.push(this.elasticTransport);
-    } catch (error) {
-      console.warn('[Logger] Failed to initialize Elasticsearch transport:', error);
-      console.info('[Logger] Falling back to console-only logging');
+      
+      this.logger = pino(baseConfig, consoleTransport);
+      this.isInitialized = true;
     }
 
-    // Create logger with transports
-    this.logger = pino(
-      baseConfig,
-      pino.multistream(transports, { dedupe: true })
-    );
+    // Apply any pending context
+    if (Object.keys(this.pendingContext).length > 0) {
+      this.logger = this.logger.child(this.pendingContext);
+    }
+  }
 
-    // Test Elasticsearch connection
-    this.testElasticConnection();
+  private async setupAdvancedLogger(): Promise<void> {
+    try {
+      // Only import pino-elasticsearch in Node.js environments
+      const pinoElastic = await import('pino-elasticsearch');
+      
+      const elasticUrl = import.meta.env?.VITE_ELASTIC_URL || 
+                        import.meta.env?.ELASTIC_URL || 
+                        'https://elastic-search.cdubz-hub.com';
+
+      const baseConfig: pino.LoggerOptions = {
+        level: this.isDevelopment ? 'debug' : 'info',
+        base: {
+          service: 'parscade-frontend',
+          env: import.meta.env?.MODE || 'development',
+          version: import.meta.env?.VITE_APP_VERSION || '1.0.0',
+          timestamp: new Date().toISOString(),
+        },
+        formatters: {
+          level: (label) => ({ level: label }),
+          log: (object) => sanitizeLogData(object),
+        },
+      };
+
+      // Create transports array
+      const transports: any[] = [];
+
+      // Console transport
+      const consoleTransport = pino.transport({
+        target: 'pino-pretty',
+        level: this.isDevelopment ? 'debug' : 'warn',
+        options: {
+          colorize: this.isDevelopment,
+          translateTime: 'yyyy-mm-dd HH:MM:ss',
+          ignore: 'pid,hostname',
+          messageFormat: this.isDevelopment 
+            ? '{service}[{level}]: {msg}' 
+            : '{msg}',
+        },
+      });
+      transports.push(consoleTransport);
+
+      // Elasticsearch transport (with error handling)
+      try {
+        this.elasticTransport = pinoElastic.default({
+          index: 'app-logs',
+          node: elasticUrl,
+          'es-version': 7,
+          'flush-bytes': 1000,
+          'flush-interval': 5000,
+          consistency: false,
+        });
+
+        // Add error handling for Elasticsearch transport
+        this.elasticTransport.on('error', (error: Error) => {
+          this.isElasticConnected = false;
+          console.warn('[Logger] Elasticsearch transport error:', error.message);
+          console.warn('[Logger] Continuing with console-only logging');
+        });
+
+        this.elasticTransport.on('insertError', (error: Error) => {
+          console.warn('[Logger] Failed to insert log into Elasticsearch:', error.message);
+        });
+
+        this.elasticTransport.on('insert', () => {
+          if (!this.isElasticConnected) {
+            this.isElasticConnected = true;
+            console.info('[Logger] ✅ Connected to Elasticsearch successfully');
+          }
+        });
+
+        transports.push(this.elasticTransport);
+      } catch (error) {
+        console.warn('[Logger] Failed to initialize Elasticsearch transport:', error);
+        console.info('[Logger] Falling back to console-only logging');
+      }
+
+      // Create logger with transports
+      this.logger = pino(
+        baseConfig,
+        pino.multistream(transports, { dedupe: true })
+      );
+
+      // Apply any pending context
+      if (Object.keys(this.pendingContext).length > 0) {
+        this.logger = this.logger.child(this.pendingContext);
+      }
+
+      // Test Elasticsearch connection
+      this.testElasticConnection();
+    } catch (error) {
+      console.warn('[Logger] Advanced logger setup failed:', error);
+      // Keep using basic logger
+    }
   }
 
   private async testElasticConnection(): Promise<void> {
@@ -181,37 +251,55 @@ class PinoLogger {
    * Initialize logger (for compatibility with existing code).
    */
   initialize(_dsn?: string, _release?: string): void {
-    console.info('[Logger] 🔧 Pino + Elasticsearch logger initialized');
+    console.info(`[Logger] 🔧 Pino logger initialized (${isBrowser ? 'Browser' : 'Node.js'} mode)`);
   }
 
   /**
    * Set user context for subsequent logs.
    */
   setUserContext(user: { id?: string; email?: string; username?: string }): void {
-    this.logger = this.logger.child({
+    const userContext = {
       user: sanitizeLogData({
         id: user.id,
         email: user.email,
         username: user.username,
       }),
-    });
+    };
+
+    this.pendingContext = { ...this.pendingContext, ...userContext };
+    
+    if (this.isInitialized) {
+      this.logger = this.logger.child(userContext);
+    }
   }
 
   /**
    * Clear user context.
    */
   clearUserContext(): void {
-    // Create new logger instance without user context
-    this.setupLogger();
+    // Remove user context from pending context
+    const { user, ...remainingContext } = this.pendingContext;
+    this.pendingContext = remainingContext;
+    
+    // Re-setup logger without user context
+    this.setupBasicLogger();
+    if (!isBrowser) {
+      this.setupAdvancedLogger().catch(error => {
+        console.warn('[Logger] Advanced setup failed during context clear:', error.message);
+      });
+    }
   }
 
   /**
    * Set additional context for subsequent logs.
    */
   setContext(key: string, context: Record<string, unknown>): void {
-    this.logger = this.logger.child({
-      [key]: sanitizeLogData(context),
-    });
+    const contextData = { [key]: sanitizeLogData(context) };
+    this.pendingContext = { ...this.pendingContext, ...contextData };
+    
+    if (this.isInitialized) {
+      this.logger = this.logger.child(contextData);
+    }
   }
 
   /**
@@ -330,10 +418,11 @@ class PinoLogger {
   /**
    * Get current connection status.
    */
-  getStatus(): { elasticsearch: boolean; console: boolean } {
+  getStatus(): { elasticsearch: boolean; console: boolean; environment: string } {
     return {
       elasticsearch: this.isElasticConnected,
       console: true,
+      environment: isBrowser ? 'browser' : 'node'
     };
   }
 
