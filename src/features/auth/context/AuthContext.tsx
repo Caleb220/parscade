@@ -209,12 +209,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (error) {
+        // Immediately dispatch error state to stop loading
+        const message = getAuthErrorMessage(error);
+        dispatch({ type: 'AUTH_ERROR', payload: message });
         throw error;
       }
 
       // Success state will be handled by auth state change listener
       // No need to dispatch here to avoid double state updates
     } catch (authError) {
+      // Ensure loading state is always stopped on error
       const message = authError instanceof AuthError
         ? getAuthErrorMessage(authError)
         : 'An unexpected error occurred';
@@ -238,12 +242,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (error) {
+        // Immediately dispatch error state to stop loading
+        const message = getAuthErrorMessage(error);
+        dispatch({ type: 'AUTH_ERROR', payload: message });
         throw error;
       }
 
       // Success state will be handled by auth state change listener
       // No need to dispatch here to avoid double state updates
     } catch (signUpError) {
+      // Ensure loading state is always stopped on error
       const message = signUpError instanceof AuthError
         ? getAuthErrorMessage(signUpError)
         : 'An unexpected error occurred';

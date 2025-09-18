@@ -114,8 +114,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) =>
       // Increment attempt count on failure
       setAttemptCount((prev) => prev + 1);
 
-      // Show error message from auth context or fallback
-      const errorMessage = error || 'Authentication failed. Please review your details and try again.';
+      // Show error message from the thrown error or auth context
+      const errorMessage = (authError as Error)?.message || error || 'Authentication failed. Please review your details and try again.';
       setFormErrors((prev) => ({
         ...prev,
         general: errorMessage,
