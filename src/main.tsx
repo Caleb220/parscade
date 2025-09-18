@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import * as Sentry from '@sentry/react';
 import { logger } from './services/logger';
 import App from './App.tsx';
 import './index.css';
@@ -79,7 +80,7 @@ setTimeout(() => {
     };
     
     // Expose Sentry for direct testing
-    (window as any).Sentry = require('@sentry/react');
+    (window as any).Sentry = Sentry;
     
     console.info('🧪 Sentry test functions available: window.testSentry.testMessage(), window.testSentry.testError(), window.testSentry.testException()');
   }
