@@ -64,14 +64,7 @@ const ResetPasswordPage: React.FC = () => {
         console.log('🔍 Search params:', Object.fromEntries(searchParams.entries()));
         console.log('🔍 URL Hash:', window.location.hash);
         
-        // For security, always sign out any existing session during password reset
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          console.log('🔒 Signing out existing session for security during password reset');
-          await supabase.auth.signOut();
-        }
-        
-        // Validate query parameters
+        // CRITICAL: Extract tokens BEFORE signing out (signOut clears the hash)
         const resetQuery = validateResetQuery(searchParams);
         if (!resetQuery) {
           console.error('❌ Invalid query parameters');
@@ -87,6 +80,14 @@ const ResetPasswordPage: React.FC = () => {
         }
 
         console.log('✅ Query parameters validated');
+        
+        // For security, always sign out any existing session during password reset
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          console.log('🔒 Signing out existing session for security during password reset');
+          await supabase.auth.signOut();
+        }
+        
         console.log('🔄 Exchanging recovery session...');
         
         // Exchange recovery session
