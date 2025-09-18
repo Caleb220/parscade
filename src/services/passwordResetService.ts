@@ -69,6 +69,31 @@ class PasswordResetRateLimiter {
 const rateLimiter = new PasswordResetRateLimiter();
 
 /**
+ * Check if current URL indicates recovery mode from Supabase.
+ */
+export const isRecoveryMode = (): boolean => {
+  try {
+    // Check URL hash for type=recovery
+    if (window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      if (hashParams.get('type') === 'recovery') {
+        return true;
+      }
+    }
+    
+    // Check search params as fallback
+    const searchParams = new URLSearchParams(window.location.search);
+    return searchParams.get('type') === 'recovery';
+  } catch (error) {
+    logger.warn('Error checking recovery mode', {
+      context: { feature: 'password-reset', action: 'checkRecoveryMode' },
+      error: error instanceof Error ? error : new Error(String(error)),
+    });
+    return false;
+  }
+};
+
+/**
  * Extracts password reset tokens from URL (hash or search params).
  * Returns null if no valid tokens are found.
  */
@@ -294,6 +319,43 @@ export const updateUserPassword = async (
     }
     
     throw new Error(extractErrorMessage(err));
+  }
+};
+
+/**
+ * Completes the recovery flow after successful password reset.
+ * Redirects user appropriately based on security preferences.
+ */
+export const completeRecoveryFlow = async (redirectToLogin = false): Promise<void> => {
+  try {
+    logger.info('Completing recovery flow', {
+      context: { feature: 'password-reset', action: 'completeRecovery' },
+      metadata: { redirectToLogin },
+    });
+
+    // Clear URL fragments to prevent reuse
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    if (redirectToLogin) {
+      // More secure: sign out and redirect to login
+      await secureSignOut();
+      
+      // Small delay to ensure signout completes
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 500);
+    } else {
+      // User-friendly: keep them logged in and go to dashboard
+      window.location.href = '/dashboard';
+    }
+  } catch (error) {
+    logger.error('Error completing recovery flow', {
+      context: { feature: 'password-reset', action: 'completeRecovery' },
+      error: error instanceof Error ? error : new Error(String(error)),
+    });
+    
+    // Fallback: go to home page
+    window.location.href = '/';
   }
 };
 

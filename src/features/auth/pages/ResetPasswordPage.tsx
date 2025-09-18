@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, CheckCircle, AlertCircle, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import Layout from '../../../components/templates/Layout';
+import RecoveryLayout from '../../../components/templates/RecoveryLayout';
 import Button from '../../../components/atoms/Button';
 import LoadingSpinner from '../../../components/atoms/LoadingSpinner';
 import {
@@ -10,7 +11,8 @@ import {
   establishRecoverySession,
   updateUserPassword,
   generateSessionId,
-  secureSignOut,
+  isRecoveryMode,
+  completeRecoveryFlow,
 } from '../../../services/passwordResetService';
 import {
   passwordResetFormSchema,
@@ -24,7 +26,7 @@ import { trackFormSubmit } from '../../../utils/analytics';
 
 /**
  * Enterprise-grade Reset Password page component.
- * Handles secure password reset flow with bulletproof token extraction.
+ * Handles secure password reset flow with recovery mode detection.
  */
 const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
@@ -42,6 +44,7 @@ const ResetPasswordPage: React.FC = () => {
   const [attempts, setAttempts] = useState<number>(0);
   const [isValidSession, setIsValidSession] = useState<boolean>(false);
   const [resetTokens, setResetTokens] = useState<PasswordResetQuery | null>(null);
+  const [inRecoveryMode, setInRecoveryMode] = useState<boolean>(false);
   
   const [showPasswords, setShowPasswords] = useState({
     password: false,
@@ -55,6 +58,16 @@ const ResetPasswordPage: React.FC = () => {
    * Initialize password reset flow with secure token extraction.
    */
   useEffect(() => {
+    // Check if we're in recovery mode
+    const recoveryMode = isRecoveryMode();
+    setInRecoveryMode(recoveryMode);
+    
+    if (recoveryMode) {
+      logger.info('Password reset page loaded in recovery mode', {
+        context: { feature: 'password-reset', action: 'recoveryModeDetected' },
+      });
+    }
+
     const initializeResetFlow = async (): Promise<void> => {
       try {
         logger.info('Initializing password reset flow', {
@@ -185,13 +198,24 @@ const ResetPasswordPage: React.FC = () => {
       
       setIsComplete(true);
 
-      // Redirect after success with delay for user feedback
-      setTimeout(() => {
-        navigate('/', { replace: true });
-      }, 2000);
+      // Handle redirect based on recovery mode
+      if (inRecoveryMode) {
+        // In recovery mode: complete the flow properly
+        setTimeout(async () => {
+          await completeRecoveryFlow(false); // Keep user logged in
+        }, 2000);
+      } else {
+        // Normal flow: redirect to home
+        setTimeout(() => {
+          navigate('/', { replace: true });
+        }, 2000);
+      }
 
     } catch (error) {
-      logWarn('Reset password: form submission failed');
+      logger.warn('Reset password: form submission failed', {
+        context: { feature: 'password-reset', action: 'formSubmission' },
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
       
       // Track failed reset
       trackFormSubmit('password-reset', false);
@@ -200,17 +224,20 @@ const ResetPasswordPage: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, sessionId, validateForm, navigate]);
+  }, [formData, sessionId, validateForm, navigate, inRecoveryMode]);
 
   /**
    * Get password strength for real-time feedback.
    */
   const passwordStrength = formData.password ? validatePassword(formData.password) : null;
 
+  // Choose layout based on recovery mode
+  const LayoutComponent = inRecoveryMode ? RecoveryLayout : Layout;
+
   // Loading state during token validation
   if (isLoading) {
     return (
-      <Layout>
+      <LayoutComponent>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -226,14 +253,14 @@ const ResetPasswordPage: React.FC = () => {
             </p>
           </motion.div>
         </div>
-      </Layout>
+      </LayoutComponent>
     );
   }
 
   // Error state for invalid tokens
   if (!isValidSession && error) {
     return (
-      <Layout>
+      <LayoutComponent>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -254,6 +281,7 @@ const ResetPasswordPage: React.FC = () => {
                 onClick={() => navigate('/forgot-password')}
                 size="lg"
                 fullWidth
+                disabled={inRecoveryMode} // Block navigation in recovery mode
               >
                 Request New Reset Link
               </Button>
@@ -262,20 +290,21 @@ const ResetPasswordPage: React.FC = () => {
                 onClick={() => navigate('/')}
                 size="lg"
                 fullWidth
+                disabled={inRecoveryMode} // Block navigation in recovery mode
               >
                 Back to Home
               </Button>
             </div>
           </motion.div>
         </div>
-      </Layout>
+      </LayoutComponent>
     );
   }
 
   // Success state
   if (isComplete) {
     return (
-      <Layout>
+      <LayoutComponent>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -294,30 +323,33 @@ const ResetPasswordPage: React.FC = () => {
               Password Updated Successfully!
             </h1>
             <p className="text-gray-600 mb-6">
-              Your password has been updated successfully. Please sign in with your new password.
+              Your password has been updated successfully. 
+              {inRecoveryMode ? ' Redirecting to your dashboard...' : ' Please sign in with your new password.'}
             </p>
-            <Button
-              onClick={() => navigate('/')}
-              rightIcon={<ArrowRight className="w-4 h-4" />}
-              size="lg"
-              fullWidth
-            >
-              Sign In
-            </Button>
+            {!inRecoveryMode && (
+              <Button
+                onClick={() => navigate('/')}
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+                size="lg"
+                fullWidth
+              >
+                Sign In
+              </Button>
+            )}
           </motion.div>
         </div>
-      </Layout>
+      </LayoutComponent>
     );
   }
 
   // Main reset password form
   return (
-    <Layout>
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
+    <LayoutComponent>
+      <div className={`${inRecoveryMode ? '' : 'min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12'}`}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 w-full max-w-md"
+          className={`bg-white rounded-2xl p-8 shadow-sm border border-gray-100 w-full ${inRecoveryMode ? '' : 'max-w-md'}`}
         >
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -327,7 +359,10 @@ const ResetPasswordPage: React.FC = () => {
               Set New Password
             </h1>
             <p className="text-gray-600">
-              Choose a strong password to secure your Parscade account.
+              {inRecoveryMode 
+                ? 'Choose a strong password to secure your account.'
+                : 'Choose a strong password to secure your Parscade account.'
+              }
             </p>
           </div>
 
@@ -475,12 +510,13 @@ const ResetPasswordPage: React.FC = () => {
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-xs text-blue-800">
               <strong>Security Notice:</strong> This password reset link is valid for one use only
-              and will expire in 24 hours. Your new password will be encrypted and stored securely.
+              and will expire in 24 hours. 
+              {inRecoveryMode && ' You cannot navigate away during the recovery process.'}
             </p>
           </div>
         </motion.div>
       </div>
-    </Layout>
+    </LayoutComponent>
   );
 };
 

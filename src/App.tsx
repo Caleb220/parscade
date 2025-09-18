@@ -16,6 +16,7 @@ import TermsPage from './features/marketing/pages/TermsPage';
 import NotFoundPage from './features/marketing/pages/NotFoundPage';
 import ErrorPage from './features/marketing/pages/ErrorPage';
 import { updateSEO, defaultSEO } from './utils/seo';
+import { isRecoveryMode } from './features/auth/services/passwordResetService';
 import type { SeoConfig } from './schemas';
 import { analytics, trackPageView } from './utils/analytics';
 import { logger } from './services/logger';
@@ -27,6 +28,7 @@ import { env } from './config/env';
  */
 const RouteHandler: FC = () => {
   const location = useLocation();
+  const inRecoveryMode = location.pathname === '/reset-password' && isRecoveryMode();
 
   useEffect(() => {
     // Define SEO configuration for each route
@@ -94,8 +96,26 @@ const RouteHandler: FC = () => {
 
     // Track page view
     trackPageView(location.pathname);
-  }, [location]);
+    
+    // Log recovery mode detection
+    if (inRecoveryMode) {
+      logger.info('Recovery mode detected in app router', {
+        context: { feature: 'password-reset', action: 'recoveryModeRouting' },
+      });
+    }
+  }, [location, inRecoveryMode]);
 
+  // In recovery mode, restrict routing to only the reset password page
+  if (inRecoveryMode && location.pathname !== '/reset-password') {
+    logger.warn('Attempted navigation during recovery mode blocked', {
+      context: { feature: 'password-reset', action: 'navigationBlocked' },
+      metadata: { attemptedPath: location.pathname },
+    });
+    
+    // Redirect back to reset password page
+    window.location.href = '/reset-password';
+    return null;
+  }
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
