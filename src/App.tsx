@@ -16,7 +16,7 @@ import TermsPage from './features/marketing/pages/TermsPage';
 import NotFoundPage from './features/marketing/pages/NotFoundPage';
 import ErrorPage from './features/marketing/pages/ErrorPage';
 import { updateSEO, defaultSEO } from './utils/seo';
-import { isRecoveryMode } from './features/auth/services/passwordResetService';
+import { isRecoveryMode } from './features/auth';
 import type { SeoConfig } from './schemas';
 import { analytics, trackPageView } from './utils/analytics';
 import { logger } from './services/logger';
