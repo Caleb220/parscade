@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback, useMemo, useRef } from 'react';
 import type { AuthState, AuthContextType, User } from '../types/authTypes';
 import { supabase } from '../../../lib/supabase';
-import type { AuthError, AuthApiError } from '@supabase/supabase-js';
+import type { AuthError, AuthApiError, User as SupabaseUser } from '@supabase/supabase-js';
 import { logger } from '../../../services/logger';
 import type { TypedSupabaseUser } from '../../../types/supabase';
 
@@ -219,7 +219,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // No need to dispatch here to avoid double state updates
     } catch (authError) {
       // Ensure loading state is always stopped on error
-      const message = authError instanceof AuthError
+      const message = (authError as any)?.name === 'AuthError'
         ? getAuthErrorMessage(authError)
         : 'An unexpected error occurred';
       dispatch({ type: 'AUTH_ERROR', payload: message });
@@ -252,7 +252,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // No need to dispatch here to avoid double state updates
     } catch (signUpError) {
       // Ensure loading state is always stopped on error
-      const message = signUpError instanceof AuthError
+      const message = (signUpError as any)?.name === 'AuthError'
         ? getAuthErrorMessage(signUpError)
         : 'An unexpected error occurred';
       dispatch({ type: 'AUTH_ERROR', payload: message });
@@ -385,7 +385,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw error;
       }
     } catch (resendError) {
-      const message = resendError instanceof AuthError
+      const message = (resendError as any)?.name === 'AuthError'
         ? getAuthErrorMessage(resendError)
         : 'Failed to resend confirmation email';
       throw new Error(message);
