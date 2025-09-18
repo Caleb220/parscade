@@ -1,34 +1,33 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, CheckCircle, AlertCircle, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import Layout from '../../../components/templates/Layout';
 import Button from '../../../components/atoms/Button';
 import LoadingSpinner from '../../../components/atoms/LoadingSpinner';
 import {
-  validateResetQuery,
-  exchangeRecoverySession,
+  extractResetTokens,
+  establishRecoverySession,
   updateUserPassword,
   generateSessionId,
+  secureSignOut,
 } from '../../../services/passwordResetService';
 import {
   passwordResetFormSchema,
   type PasswordResetForm,
-  type PasswordResetState,
+  type PasswordResetQuery,
 } from '../../../schemas/auth/passwordReset';
 import { validatePassword } from '../../../utils/passwordValidation';
 import { formatErrorForUser } from '../../../utils/zodError';
 import { logWarn } from '../../../utils/log';
 import { trackFormSubmit } from '../../../utils/analytics';
-import { supabase } from '../../../lib/supabase';
 
 /**
  * Enterprise-grade Reset Password page component.
- * Handles secure password reset flow with Supabase integration.
+ * Handles secure password reset flow with bulletproof token extraction.
  */
 const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   
   // Component state
   const [formData, setFormData] = useState<PasswordResetForm>({
@@ -36,13 +35,13 @@ const ResetPasswordPage: React.FC = () => {
     confirmPassword: '',
   });
   
-  const [state, setState] = useState<PasswordResetState>({
-    isLoading: true, // Start with loading to validate tokens
-    isComplete: false,
-    error: null,
-    attempts: 0,
-    lastAttempt: null,
-  });
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isComplete, setIsComplete] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [attempts, setAttempts] = useState<number>(0);
+  const [isValidSession, setIsValidSession] = useState<boolean>(false);
+  const [resetTokens, setResetTokens] = useState<PasswordResetQuery | null>(null);
   
   const [showPasswords, setShowPasswords] = useState({
     password: false,
@@ -51,86 +50,50 @@ const ResetPasswordPage: React.FC = () => {
   
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof PasswordResetForm, string>>>({});
   const [sessionId] = useState(() => generateSessionId());
-  const [isValidSession, setIsValidSession] = useState(false);
 
   /**
-   * Validate and exchange recovery tokens on component mount.
+   * Initialize password reset flow with secure token extraction.
    */
   useEffect(() => {
     const initializeResetFlow = async (): Promise<void> => {
       try {
-        console.log('🔄 Initializing reset flow...');
-        console.log('🔍 Full URL:', window.location.href);
-        console.log('🔍 Search params:', Object.fromEntries(searchParams.entries()));
-        console.log('🔍 URL Hash:', window.location.hash);
+        console.log('🔄 Initializing password reset flow...');
         
-        // CRITICAL: Extract tokens BEFORE signing out (signOut clears the hash)
-        const resetQuery = validateResetQuery(searchParams);
-        if (!resetQuery) {
-          console.error('❌ Invalid query parameters');
-          console.error('🔍 Current URL for debugging:', window.location.href);
-          console.error('🔍 Expected URL format should include access_token');
-          
-          setState(prev => ({
-            ...prev,
-            isLoading: false,
-            error: 'No reset token found in URL. This usually indicates a Supabase configuration issue. Please check your email template and Site URL settings.',
-          }));
+        // Step 1: Extract tokens from URL BEFORE any signout operations
+        const tokens = extractResetTokens();
+        if (!tokens) {
+          setError('Invalid password reset link. Please request a new one.');
+          setIsLoading(false);
           return;
         }
-
-        console.log('✅ Query parameters validated');
         
-        // For security, always sign out any existing session during password reset
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          console.log('🔒 Signing out existing session for security during password reset');
-          await supabase.auth.signOut();
-        }
+        console.log('✅ Reset tokens extracted successfully');
+        setResetTokens(tokens);
         
-        console.log('🔄 Exchanging recovery session...');
+        // Step 2: Sign out any existing session for security
+        await secureSignOut();
         
-        // Exchange recovery session
-        await exchangeRecoverySession(resetQuery);
+        // Step 3: Establish recovery session using extracted tokens
+        await establishRecoverySession(tokens);
         
-        console.log('✅ Recovery session established');
+        // Step 4: Mark session as valid
         setIsValidSession(true);
-        setState(prev => ({
-          ...prev,
-          isLoading: false,
-          error: null,
-        }));
+        setIsLoading(false);
+        setError(null);
+        
+        console.log('✅ Password reset flow initialized successfully');
+        
       } catch (error) {
-        console.error('❌ Reset password session initialization failed:', error);
-        logWarn('Reset password: session initialization failed');
+        console.error('❌ Password reset initialization failed:', error);
+        logWarn('Reset password: initialization failed');
         
-        // Enhanced error handling for different failure modes
-        let errorMessage = 'Failed to validate password reset link.';
-        
-        if (error instanceof Error) {
-          const message = error.message.toLowerCase();
-          
-          if (message.includes('expired') || message.includes('invalid')) {
-            errorMessage = 'This password reset link has expired or is invalid. Please request a new one.';
-          } else if (message.includes('session')) {
-            errorMessage = 'Unable to establish reset session. Please try the link again or request a new one.';
-          } else if (message.includes('token')) {
-            errorMessage = 'Invalid reset token. Please request a new password reset link.';
-          } else {
-            errorMessage = error.message;
-          }
-        }
-        
-        setState(prev => ({
-          ...prev,
-          isLoading: false,
-          error: errorMessage,
-        }));
+        setIsLoading(false);
+        setError(formatErrorForUser(error, 'Failed to initialize password reset. Please request a new reset link.'));
       }
     };
 
     void initializeResetFlow();
-  }, [searchParams]);
+  }, []);
 
   /**
    * Handle form input changes with real-time validation.
@@ -154,11 +117,11 @@ const ResetPasswordPage: React.FC = () => {
         }
 
         // Clear general error
-        if (state.error) {
-          setState(prev => ({ ...prev, error: null }));
+        if (error) {
+          setError(null);
         }
       },
-    [fieldErrors, state.error]
+    [fieldErrors, error]
   );
 
   /**
@@ -207,13 +170,9 @@ const ResetPasswordPage: React.FC = () => {
       return;
     }
 
-    setState(prev => ({
-      ...prev,
-      isLoading: true,
-      error: null,
-      attempts: prev.attempts + 1,
-      lastAttempt: new Date(),
-    }));
+    setIsSubmitting(true);
+    setError(null);
+    setAttempts(prev => prev + 1);
 
     try {
       await updateUserPassword(formData, sessionId);
@@ -221,13 +180,9 @@ const ResetPasswordPage: React.FC = () => {
       // Track successful reset
       trackFormSubmit('password-reset', true);
       
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        isComplete: true,
-      }));
+      setIsComplete(true);
 
-      // Sign out user after password reset for security - they must log in with new password
+      // Redirect after success with delay for user feedback
       setTimeout(() => {
         navigate('/', { replace: true });
       }, 2000);
@@ -238,11 +193,9 @@ const ResetPasswordPage: React.FC = () => {
       // Track failed reset
       trackFormSubmit('password-reset', false);
       
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: formatErrorForUser(error),
-      }));
+      setError(formatErrorForUser(error));
+    } finally {
+      setIsSubmitting(false);
     }
   }, [formData, sessionId, validateForm, navigate]);
 
@@ -252,7 +205,7 @@ const ResetPasswordPage: React.FC = () => {
   const passwordStrength = formData.password ? validatePassword(formData.password) : null;
 
   // Loading state during token validation
-  if (state.isLoading && !isValidSession) {
+  if (isLoading) {
     return (
       <Layout>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -275,7 +228,7 @@ const ResetPasswordPage: React.FC = () => {
   }
 
   // Error state for invalid tokens
-  if (!isValidSession && state.error) {
+  if (!isValidSession && error) {
     return (
       <Layout>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -291,7 +244,7 @@ const ResetPasswordPage: React.FC = () => {
               Invalid Reset Link
             </h1>
             <p className="text-gray-600 mb-6">
-              {state.error}
+              {error}
             </p>
             <div className="space-y-3">
               <Button
@@ -317,7 +270,7 @@ const ResetPasswordPage: React.FC = () => {
   }
 
   // Success state
-  if (state.isComplete) {
+  if (isComplete) {
     return (
       <Layout>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -491,7 +444,7 @@ const ResetPasswordPage: React.FC = () => {
 
             {/* Error Display */}
             <AnimatePresence>
-              {state.error && (
+              {error && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -499,7 +452,7 @@ const ResetPasswordPage: React.FC = () => {
                   className="flex items-center p-3 bg-red-50 border border-red-200 rounded-md"
                 >
                   <AlertCircle className="w-5 h-5 text-red-600 mr-2 flex-shrink-0" />
-                  <span className="text-sm text-red-700">{state.error}</span>
+                  <span className="text-sm text-red-700">{error}</span>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -508,10 +461,10 @@ const ResetPasswordPage: React.FC = () => {
               type="submit"
               fullWidth
               size="lg"
-              isLoading={state.isLoading}
+              isLoading={isSubmitting}
               rightIcon={<ArrowRight className="w-4 h-4" />}
             >
-              {state.isLoading ? 'Updating Password...' : 'Update Password'}
+              {isSubmitting ? 'Updating Password...' : 'Update Password'}
             </Button>
           </form>
 

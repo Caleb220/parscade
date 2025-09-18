@@ -23,12 +23,6 @@ class PasswordResetRateLimiter {
   private readonly maxAttempts = 5;
   private readonly windowMs = 15 * 60 * 1000; // 15 minutes
 
-  /**
-   * Check if a session can make another reset attempt.
-   * 
-   * @param sessionId - Unique session identifier
-   * @returns True if attempt is allowed
-   */
   canAttempt(sessionId: string): boolean {
     const record = this.attempts.get(sessionId);
     if (!record) return true;
@@ -36,7 +30,6 @@ class PasswordResetRateLimiter {
     const now = new Date();
     const timeSinceLastAttempt = now.getTime() - record.lastAttempt.getTime();
 
-    // Reset counter if window has passed
     if (timeSinceLastAttempt > this.windowMs) {
       this.attempts.delete(sessionId);
       return true;
@@ -45,11 +38,6 @@ class PasswordResetRateLimiter {
     return record.count < this.maxAttempts;
   }
 
-  /**
-   * Record a reset attempt for rate limiting.
-   * 
-   * @param sessionId - Unique session identifier
-   */
   recordAttempt(sessionId: string): void {
     const now = new Date();
     const record = this.attempts.get(sessionId);
@@ -62,12 +50,6 @@ class PasswordResetRateLimiter {
     }
   }
 
-  /**
-   * Get remaining attempts for a session.
-   * 
-   * @param sessionId - Unique session identifier
-   * @returns Number of attempts remaining
-   */
   getRemainingAttempts(sessionId: string): number {
     const record = this.attempts.get(sessionId);
     if (!record) return this.maxAttempts;
@@ -75,7 +57,6 @@ class PasswordResetRateLimiter {
     const now = new Date();
     const timeSinceLastAttempt = now.getTime() - record.lastAttempt.getTime();
 
-    // Reset counter if window has passed
     if (timeSinceLastAttempt > this.windowMs) {
       this.attempts.delete(sessionId);
       return this.maxAttempts;
@@ -88,132 +69,89 @@ class PasswordResetRateLimiter {
 const rateLimiter = new PasswordResetRateLimiter();
 
 /**
- * Validates password reset query parameters from URL.
- * 
- * @param queryParams - URL search parameters
- * @returns Validated query parameters or null if invalid
+ * Extracts password reset tokens from URL (hash or search params).
+ * Returns null if no valid tokens are found.
  */
-export const validateResetQuery = (queryParams: URLSearchParams): PasswordResetQuery | null => {
-  console.log('🔍 All query parameters:', Object.fromEntries(queryParams.entries()));
-  console.log('🔍 Full URL:', window.location.href);
-  console.log('🔍 URL Hash:', window.location.hash);
-  
-  // Handle both new and legacy URL formats from Supabase
-  const rawParams: any = {};
-  
-  // Check if tokens are in URL hash (some Supabase configurations use fragments)
-  if (window.location.hash) {
-    console.log('🔍 Checking URL hash for tokens:', window.location.hash);
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    console.log('🔍 Hash parameters:', Object.fromEntries(hashParams.entries()));
+export const extractResetTokens = (): PasswordResetQuery | null => {
+  try {
+    console.log('🔍 Extracting reset tokens from URL...');
+    console.log('🔍 Current URL:', window.location.href);
     
-    if (hashParams.get('access_token')) {
-      console.log('📋 Found tokens in URL hash');
-      rawParams.access_token = hashParams.get('access_token');
-      rawParams.refresh_token = hashParams.get('refresh_token') || hashParams.get('access_token');
-      rawParams.expires_in = hashParams.get('expires_in') || '3600';
-      rawParams.token_type = hashParams.get('token_type') || 'bearer';
-      rawParams.type = hashParams.get('type') || 'recovery';
+    const rawParams: any = {};
+    
+    // First, check URL hash (most common for Supabase)
+    if (window.location.hash) {
+      console.log('🔍 Found URL hash:', window.location.hash);
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      
+      if (hashParams.get('access_token')) {
+        console.log('✅ Found tokens in URL hash');
+        rawParams.access_token = hashParams.get('access_token');
+        rawParams.refresh_token = hashParams.get('refresh_token') || hashParams.get('access_token');
+        rawParams.expires_in = hashParams.get('expires_in') || '3600';
+        rawParams.token_type = hashParams.get('token_type') || 'bearer';
+        rawParams.type = hashParams.get('type') || 'recovery';
+      }
     }
-  }
-  
-  // Check for direct access_token in query params (after successful Supabase redirect)
-  if (!rawParams.access_token && queryParams.get('access_token')) {
-    console.log('📋 Using standard format (access_token found)');
-    rawParams.access_token = queryParams.get('access_token');
-    rawParams.refresh_token = queryParams.get('refresh_token');
-    rawParams.expires_in = queryParams.get('expires_in');
-    rawParams.token_type = queryParams.get('token_type');
-    rawParams.type = queryParams.get('type');
-  }
-  // Check for token parameter (some Supabase configurations)
-  else if (!rawParams.access_token && queryParams.get('token')) {
-    console.log('📋 Using token parameter format');
-    const token = queryParams.get('token');
-    rawParams.access_token = token;
-    rawParams.refresh_token = token;
-    rawParams.expires_in = '3600';
-    rawParams.token_type = 'bearer';
-    rawParams.type = queryParams.get('type') || 'recovery';
-  }
-  // Legacy format (direct token hash)
-  else if (!rawParams.access_token) {
-    console.log('📋 Checking for legacy format...');
-    const tokenHash = Array.from(queryParams.keys()).find(key => 
-      key.length > 20 && !['type', 'redirect_to'].includes(key)
-    );
     
-    if (tokenHash) {
-      console.log('📋 Using legacy format (token hash found)');
-      rawParams.access_token = tokenHash;
-      rawParams.refresh_token = tokenHash; // Use same token for both
-      rawParams.expires_in = '3600';
-      rawParams.token_type = 'bearer';
-      rawParams.type = queryParams.get('type') || 'recovery';
-    }
-  }
-
-  // If still no tokens found, log detailed info
-  if (!rawParams.access_token) {
-    console.log('❌ No valid token format found');
-    console.log('🔍 Available query keys:', Array.from(queryParams.keys()));
-    console.log('🔍 Available hash keys:', window.location.hash ? Array.from(new URLSearchParams(window.location.hash.substring(1)).keys()) : []);
-    console.log('🔍 Keys with length > 20:', Array.from(queryParams.keys()).filter(key => key.length > 20));
-    console.log('🔍 Full current URL for debugging:', window.location.href);
-    
-    // Check if this might be a direct Supabase verification link
-    if (window.location.href.includes('supabase.co/auth/v1/verify')) {
-      console.log('🔍 This appears to be a Supabase verification URL - check your email template configuration');
-    }
-  }
-
-  console.log('🔍 Parsing query params:', Object.fromEntries(queryParams.entries()));
-  console.log('🔍 Raw params for validation:', rawParams);
-
-  const result = passwordResetQuerySchema.safeParse(rawParams);
-  if (!result.success) {
-    console.error('❌ Query validation failed:', result.error.issues);
-    console.error('❌ Validation errors:', result.error.issues.map(issue => ({
-      path: issue.path.join('.'),
-      message: issue.message,
-      received: issue.code === 'invalid_type' ? (issue as any).received : undefined
-    })));
-    
-    // Provide specific troubleshooting hints
+    // Fallback: check search params
     if (!rawParams.access_token) {
-      console.error('💡 TROUBLESHOOTING: No access token found. This usually means:');
-      console.error('   1. Supabase Site URL doesn\'t match your app URL');
-      console.error('   2. Supabase Redirect URLs don\'t include /reset-password');
-      console.error('   3. Email template uses wrong URL format');
-      console.error('   Current URL:', window.location.href);
-      console.error('   Expected: Should contain access_token in URL or hash');
+      const searchParams = new URLSearchParams(window.location.search);
+      
+      if (searchParams.get('access_token')) {
+        console.log('✅ Found tokens in search params');
+        rawParams.access_token = searchParams.get('access_token');
+        rawParams.refresh_token = searchParams.get('refresh_token');
+        rawParams.expires_in = searchParams.get('expires_in');
+        rawParams.token_type = searchParams.get('token_type');
+        rawParams.type = searchParams.get('type');
+      }
     }
     
-    logWarn('Password reset: invalid query parameters');
+    // Legacy format check
+    if (!rawParams.access_token) {
+      const searchParams = new URLSearchParams(window.location.search);
+      const tokenHash = Array.from(searchParams.keys()).find(key => 
+        key.length > 20 && !['type', 'redirect_to'].includes(key)
+      );
+      
+      if (tokenHash) {
+        console.log('✅ Found legacy token format');
+        rawParams.access_token = tokenHash;
+        rawParams.refresh_token = tokenHash;
+        rawParams.expires_in = '3600';
+        rawParams.token_type = 'bearer';
+        rawParams.type = searchParams.get('type') || 'recovery';
+      }
+    }
+    
+    if (!rawParams.access_token) {
+      console.log('❌ No reset tokens found in URL');
+      return null;
+    }
+    
+    // Validate the extracted tokens
+    const result = passwordResetQuerySchema.safeParse(rawParams);
+    if (!result.success) {
+      console.error('❌ Token validation failed:', result.error.issues);
+      return null;
+    }
+    
+    console.log('✅ Reset tokens extracted and validated successfully');
+    return result.data;
+    
+  } catch (error) {
+    console.error('❌ Error extracting reset tokens:', error);
     return null;
   }
-
-  console.log('✅ Query validation successful');
-  return result.data;
 };
 
 /**
- * Exchanges recovery session for authenticated session.
- * This is required to update the user's password.
- * 
- * @param tokens - Recovery tokens from email link
- * @returns Success status
+ * Establishes a recovery session using validated tokens.
  */
-export const exchangeRecoverySession = async (tokens: PasswordResetQuery): Promise<void> => {
+export const establishRecoverySession = async (tokens: PasswordResetQuery): Promise<void> => {
   try {
-    console.log('🔄 Setting session with tokens...');
-    console.log('🔍 Token info:', {
-      access_token_length: tokens.access_token.length,
-      refresh_token_length: tokens.refresh_token.length,
-      expires_in: tokens.expires_in,
-      token_type: tokens.token_type,
-      type: tokens.type
-    });
+    console.log('🔄 Establishing recovery session...');
     
     const { error } = await supabase.auth.setSession({
       access_token: tokens.access_token,
@@ -221,77 +159,37 @@ export const exchangeRecoverySession = async (tokens: PasswordResetQuery): Promi
     });
 
     if (error) {
-      console.error('❌ Supabase setSession error:', error);
-      console.error('❌ Error details:', {
-        name: error.name,
-        message: error.message,
-        status: 'status' in error ? error.status : 'N/A'
-      });
-      
       throw new SupabaseServiceError(
         getSessionErrorMessage(error),
         error,
-        'exchangeRecoverySession'
+        'establishRecoverySession'
       );
     }
-    
-    console.log('✅ Session established successfully');
     
     // Verify the session was set correctly
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
-      console.error('❌ Failed to verify session:', sessionError);
       throw new SupabaseServiceError(
         'Session was set but could not be verified',
         sessionError,
-        'exchangeRecoverySession'
+        'establishRecoverySession'
       );
     }
     
     if (!session) {
-      console.error('❌ No session found after setting tokens');
       throw new Error('Failed to establish recovery session');
     }
     
-    console.log('✅ Session verified successfully');
+    console.log('✅ Recovery session established successfully');
   } catch (err) {
-    console.error('❌ Exchange recovery session failed:', err);
-    logError('Password reset: failed to exchange recovery session');
-    throw err instanceof SupabaseServiceError ? err : new Error('Session exchange failed');
+    console.error('❌ Failed to establish recovery session:', err);
+    logError('Password reset: failed to establish recovery session');
+    throw err instanceof SupabaseServiceError ? err : new Error('Session establishment failed');
   }
-};
-
-/**
- * Converts session establishment errors to user-friendly messages.
- */
-const getSessionErrorMessage = (error: AuthError | AuthApiError): string => {
-  const message = error.message?.toLowerCase() || '';
-  
-  if (message.includes('invalid') && message.includes('token')) {
-    return 'This password reset link is invalid. Please request a new one.';
-  }
-  
-  if (message.includes('expired')) {
-    return 'This password reset link has expired. Please request a new one.';
-  }
-  
-  if (message.includes('malformed')) {
-    return 'The password reset link is malformed. Please request a new one.';
-  }
-  
-  if ('status' in error && error.status === 401) {
-    return 'This password reset link is no longer valid. Please request a new one.';
-  }
-  
-  return 'Failed to establish recovery session. Please request a new password reset link.';
 };
 
 /**
  * Updates user password with enterprise-grade validation and security.
- * 
- * @param formData - Validated password form data
- * @param sessionId - Unique session identifier for rate limiting
- * @returns Success status
  */
 export const updateUserPassword = async (
   formData: PasswordResetForm,
@@ -318,10 +216,10 @@ export const updateUserPassword = async (
     // Record attempt for rate limiting
     rateLimiter.recordAttempt(sessionId);
 
-    // Check if user has an active session (from auto-login reset link)
+    // Check if user has an active recovery session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      throw new Error('No active session found. Please request a new password reset link.');
+      throw new Error('No active recovery session found. Please request a new password reset link.');
     }
 
     console.log('🔄 Updating password for authenticated user');
@@ -353,10 +251,32 @@ export const updateUserPassword = async (
 };
 
 /**
+ * Converts session establishment errors to user-friendly messages.
+ */
+const getSessionErrorMessage = (error: AuthError | AuthApiError): string => {
+  const message = error.message?.toLowerCase() || '';
+  
+  if (message.includes('invalid') && message.includes('token')) {
+    return 'This password reset link is invalid. Please request a new one.';
+  }
+  
+  if (message.includes('expired')) {
+    return 'This password reset link has expired. Please request a new one.';
+  }
+  
+  if (message.includes('malformed')) {
+    return 'The password reset link is malformed. Please request a new one.';
+  }
+  
+  if ('status' in error && error.status === 401) {
+    return 'This password reset link is no longer valid. Please request a new one.';
+  }
+  
+  return 'Failed to establish recovery session. Please request a new password reset link.';
+};
+
+/**
  * Converts Supabase password update errors to user-friendly messages.
- * 
- * @param error - Supabase AuthError or AuthApiError
- * @returns User-friendly error message
  */
 const getPasswordUpdateErrorMessage = (error: AuthError | AuthApiError): string => {
   const message = error.message?.toLowerCase() || '';
@@ -392,27 +312,11 @@ const getPasswordUpdateErrorMessage = (error: AuthError | AuthApiError): string 
     }
   }
   
-  // Legacy message handling for backward compatibility
-  switch (error.message) {
-    case 'Password should be at least 6 characters':
-    case 'Password should be at least 8 characters':
-      return 'Password must be at least 8 characters long for security.';
-    case 'Auth session missing!':
-      return 'Your password reset link has expired. Please request a new one.';
-    case 'Invalid recovery token':
-      return 'This password reset link is invalid or has expired. Please request a new one.';
-    case 'Token has expired':
-      return 'Your password reset link has expired. Please request a new password reset.';
-    default:
-      return `Failed to update password: ${error.message}`;
-  }
+  return `Failed to update password: ${error.message}`;
 };
 
 /**
  * Generates a unique session identifier for rate limiting.
- * Uses a combination of user agent and timestamp for uniqueness.
- * 
- * @returns Unique session identifier
  */
 export const generateSessionId = (): string => {
   const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown';
@@ -420,4 +324,18 @@ export const generateSessionId = (): string => {
   const random = Math.random().toString(36).substring(2, 15);
   
   return btoa(`${userAgent}-${timestamp}-${random}`).replace(/[^a-zA-Z0-9]/g, '').substring(0, 32);
+};
+
+/**
+ * Securely signs out any existing session.
+ * Returns immediately for UX, handles errors gracefully.
+ */
+export const secureSignOut = async (): Promise<void> => {
+  try {
+    console.log('🔒 Signing out existing session for security...');
+    await supabase.auth.signOut();
+    console.log('✅ Secure signout completed');
+  } catch (error) {
+    console.warn('⚠️ Signout warning (non-critical):', error);
+  }
 };
