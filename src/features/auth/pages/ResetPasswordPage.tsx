@@ -19,7 +19,7 @@ import {
 } from '../../../schemas/auth/passwordReset';
 import { validatePassword } from '../../../utils/passwordValidation';
 import { formatErrorForUser } from '../../../utils/zodError';
-import { logWarn } from '../../../utils/log';
+import { logger } from '../../../services/logger';
 import { trackFormSubmit } from '../../../utils/analytics';
 
 /**
@@ -57,7 +57,9 @@ const ResetPasswordPage: React.FC = () => {
   useEffect(() => {
     const initializeResetFlow = async (): Promise<void> => {
       try {
-        console.log('🔄 Initializing password reset flow...');
+        logger.info('Initializing password reset flow', {
+          context: { feature: 'password-reset', action: 'initialization' },
+        });
         
         // Step 1: Extract tokens from URL BEFORE any signout operations
         const tokens = extractResetTokens();
@@ -67,7 +69,7 @@ const ResetPasswordPage: React.FC = () => {
           return;
         }
         
-        console.log('✅ Reset tokens extracted successfully');
+        logger.debug('Reset tokens extracted successfully');
         setResetTokens(tokens);
         
         // Step 3: Establish recovery session using extracted tokens
@@ -78,11 +80,15 @@ const ResetPasswordPage: React.FC = () => {
         setIsLoading(false);
         setError(null);
         
-        console.log('✅ Password reset flow initialized successfully');
+        logger.info('Password reset flow initialized successfully', {
+          context: { feature: 'password-reset', action: 'initializationComplete' },
+        });
         
       } catch (error) {
-        console.error('❌ Password reset initialization failed:', error);
-        logWarn('Reset password: initialization failed');
+        logger.error('Password reset initialization failed', {
+          context: { feature: 'password-reset', action: 'initialization' },
+          error: error instanceof Error ? error : new Error(String(error)),
+        });
         
         setIsLoading(false);
         setError(formatErrorForUser(error, 'Failed to initialize password reset. Please request a new reset link.'));

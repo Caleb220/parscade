@@ -18,6 +18,7 @@ import {
   securitySettingsSchema,
 } from '../../../schemas';
 import { ensureMaybeSingle, ensureSingle, pruneUndefined, SupabaseServiceError } from '../../../services/supabaseClient';
+import { logger } from '../../../services/logger';
 
 const TABLE_NAME = 'account_settings';
 
@@ -103,10 +104,16 @@ export const fetchOrCreateAccountSettings = async (
 
   const row = ensureMaybeSingle(response, 'Fetch account settings');
   if (row) {
+    logger.debug('Found existing account settings', {
+      context: { feature: 'account-settings', action: 'fetchSettings', userId },
+    });
     const parsedRow = accountSettingsRowSchema.parse(row);
     return mapRowToAccountSettings(parsedRow);
   }
 
+  logger.info('Creating default account settings for new user', {
+    context: { feature: 'account-settings', action: 'createDefaults', userId },
+  });
   const sanitizedSeed = seed ? accountSettingsUpdateSchema.parse(seed) : undefined;
   const defaults = createDefaultAccountSettings(userId, sanitizedSeed as Partial<AccountSettings> | undefined);
   return insertAccountSettings(defaults);

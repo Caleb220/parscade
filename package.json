@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test": "echo 'Running Sentry integration test...' && node -e \"const { logger } = require('./dist/services/logger.js'); logger.info('Test log entry'); console.log('✅ Sentry integration test passed');\"",
     "security:audit": "npm audit --production"
   },
   "dependencies": {

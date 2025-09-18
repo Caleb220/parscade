@@ -33,7 +33,7 @@ interface UseAccountSettingsResult {
 }
 
 import { formatErrorForUser } from '../../../utils/zodError';
-import { logWarn } from '../../../utils/log';
+import { logger } from '../../../services/logger';
 
 export const useAccountSettings = ({ userId, email, fullName }: UseAccountSettingsOptions): UseAccountSettingsResult => {
   const [settings, setSettings] = useState<AccountSettings | null>(null);
@@ -71,7 +71,10 @@ export const useAccountSettings = ({ userId, email, fullName }: UseAccountSettin
       const data = await fetchOrCreateAccountSettings(userId, seedOverrides);
       setSettings(data);
     } catch (err) {
-      logWarn('Account settings: failed to load');
+      logger.warn('Failed to load account settings', {
+        context: { feature: 'account-settings', action: 'loadSettings', userId },
+        error: err instanceof Error ? err : new Error(String(err)),
+      });
       if (defaults) {
         setSettings(defaults);
       }
@@ -104,7 +107,11 @@ export const useAccountSettings = ({ userId, email, fullName }: UseAccountSettin
         setSettings(updated);
         return updated;
       } catch (err) {
-        logWarn(`Account settings: failed to update ${section}`);
+        logger.warn(`Failed to update account settings section: ${section}`, {
+          context: { feature: 'account-settings', action: 'updateSection', userId },
+          error: err instanceof Error ? err : new Error(String(err)),
+          metadata: { section },
+        });
         setError(formatErrorForUser(err, 'We could not load your settings.'))
         throw err;
       } finally {

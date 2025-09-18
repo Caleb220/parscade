@@ -18,6 +18,7 @@ import ErrorPage from './features/marketing/pages/ErrorPage';
 import { updateSEO, defaultSEO } from './utils/seo';
 import type { SeoConfig } from './schemas';
 import { analytics, trackPageView } from './utils/analytics';
+import { logger } from './services/logger';
 import { env } from './config/env';
 
 /**
@@ -127,6 +128,14 @@ const App: FC = () => {
     if (env.analytics.key) {
       analytics.init(env.analytics.key);
     }
+    
+    // Set up global request context for Sentry
+    logger.setContext('app', {
+      version: import.meta.env?.VITE_APP_VERSION || '1.0.0',
+      environment: import.meta.env?.MODE || 'development',
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+    });
   }, []);
 
   return (
