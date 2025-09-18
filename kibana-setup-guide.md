@@ -1,6 +1,6 @@
 # Kibana Setup Guide for Parscade Application Logging
 
-This guide will help you set up Kibana dashboards and visualizations for monitoring the Parscade application logs stored in Elasticsearch.
+This guide will help you set up Kibana dashboards and visualizations for monitoring the Parscade application logs stored in Elasticsearch.  
 
 ## Prerequisites
 
