@@ -7,4 +7,13 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  define: {
+    global: 'globalThis',
+  },
+  resolve: {
+    alias: {
+      // Provide browser-compatible alternatives for Node.js modules
+      'pino-elasticsearch': false,
+    },
+  },
 });
