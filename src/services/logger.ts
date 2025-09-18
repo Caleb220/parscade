@@ -117,10 +117,22 @@ class Logger {
         environment: import.meta.env?.MODE || 'development',
         release: release || `parscade@${import.meta.env?.VITE_APP_VERSION || '1.0.0'}`,
         
-        // Enhanced configuration for debugging
+        // Enhanced configuration for self-hosted Sentry
         maxBreadcrumbs: 50,
         attachStacktrace: true,
         sendClientReports: true,
+        
+        // Self-hosted Sentry configuration
+        tunnel: undefined, // Don't use tunnel for self-hosted
+        normalizeDepth: 6,
+        
+        // Transport options for self-hosted Sentry
+        transportOptions: {
+          headers: {
+            'Content-Type': 'application/x-sentry-envelope',
+            'X-Sentry-Auth': `Sentry sentry_version=7, sentry_key=${dsn.split('@')[0].split('://')[1]}, sentry_client=sentry.javascript.react/7.120.4`,
+          },
+        },
         
         integrations: [
           new Integrations.BrowserTracing({
@@ -142,6 +154,7 @@ class Logger {
             level: event.level,
             message: event.message,
             fingerprint: event.fingerprint,
+            dsn: dsn.substring(0, 50) + '...',
           });
           
           // Sanitize sensitive data
@@ -166,23 +179,11 @@ class Logger {
         },
         
         // Transport options for debugging network issues
-        transport: (options) => {
-          const transport = new Sentry.BrowserTransport(options);
-          return {
-            ...transport,
-            send: (envelope) => {
-              console.debug('📡 Sentry transport sending envelope:', {
-                items: envelope[1]?.length || 0,
-                dsn: options.url
-              });
-              
-              return transport.send(envelope).catch(error => {
-                console.error('❌ Sentry transport error:', error);
-                throw error;
-              });
-            }
-          };
-        }
+        // Custom transport for better self-hosted support
+        beforeSendTransaction: (transaction) => {
+          console.debug('📡 Sentry transaction:', transaction.name);
+          return transaction;
+        },
       });
 
       // Set up global error handlers
