@@ -75,43 +75,90 @@ serve(async (req) => {
       replyTo: formData.email,
       subject: `Contact Form: ${formData.subject}`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px;">
+          <h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px; margin-top: 0;">
             New Contact Form Submission
           </h2>
           
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
             <h3 style="margin-top: 0; color: #374151;">Contact Details</h3>
-            <p><strong>Name:</strong> ${formData.name}</p>
-            <p><strong>Email:</strong> ${formData.email}</p>
-            ${formData.company ? `<p><strong>Company:</strong> ${formData.company}</p>` : ''}
-            <p><strong>Subject:</strong> ${formData.subject}</p>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #374151; width: 100px;">Name:</td>
+                <td style="padding: 8px 0; color: #1f2937;">${formData.name || 'Not provided'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #374151;">Email:</td>
+                <td style="padding: 8px 0; color: #1f2937;">${formData.email || 'Not provided'}</td>
+              </tr>
+              ${formData.company ? `
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #374151;">Company:</td>
+                <td style="padding: 8px 0; color: #1f2937;">${formData.company}</td>
+              </tr>
+              ` : ''}
+              <tr>
+                <td style="padding: 8px 0; font-weight: bold; color: #374151;">Subject:</td>
+                <td style="padding: 8px 0; color: #1f2937;">${formData.subject || 'Not provided'}</td>
+              </tr>
+            </table>
           </div>
           
-          <div style="background-color: #ffffff; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+          <div style="background-color: #ffffff; padding: 20px; border: 2px solid #e5e7eb; border-radius: 8px; margin: 20px 0;">
             <h3 style="margin-top: 0; color: #374151;">Message</h3>
-            <p style="white-space: pre-wrap; line-height: 1.6;">${formData.message}</p>
+            <div style="background-color: #f9fafb; padding: 15px; border-radius: 6px; border-left: 4px solid #2563eb;">
+              <p style="white-space: pre-wrap; line-height: 1.6; margin: 0; color: #1f2937; font-size: 14px;">${formData.message || 'No message provided'}</p>
+            </div>
           </div>
           
           <div style="margin-top: 20px; padding: 15px; background-color: #eff6ff; border-radius: 8px; font-size: 12px; color: #1e40af;">
-            <p style="margin: 0;"><strong>Sent from:</strong> Parscade Contact Form</p>
-            <p style="margin: 5px 0 0 0;"><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="font-weight: bold; padding: 2px 0;">Sent from:</td>
+                <td style="padding: 2px 0;">Parscade Contact Form</td>
+              </tr>
+              <tr>
+                <td style="font-weight: bold; padding: 2px 0;">Timestamp:</td>
+                <td style="padding: 2px 0;">${new Date().toLocaleString('en-US', { 
+                  timeZone: 'America/Los_Angeles',
+                  year: 'numeric',
+                  month: 'long', 
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit'
+                })}</td>
+              </tr>
+              <tr>
+                <td style="font-weight: bold; padding: 2px 0;">IP Address:</td>
+                <td style="padding: 2px 0;">${req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'Unknown'}</td>
+              </tr>
+            </table>
           </div>
         </div>
       `,
       text: `
 New Contact Form Submission
 
-Name: ${formData.name}
-Email: ${formData.email}
-${formData.company ? `Company: ${formData.company}\n` : ''}Subject: ${formData.subject}
+Name: ${formData.name || 'Not provided'}
+Email: ${formData.email || 'Not provided'}
+${formData.company ? `Company: ${formData.company}\n` : ''}Subject: ${formData.subject || 'Not provided'}
 
 Message:
-${formData.message}
+${formData.message || 'No message provided'}
 
 ---
 Sent from: Parscade Contact Form
-Timestamp: ${new Date().toLocaleString()}
+Timestamp: ${new Date().toLocaleString('en-US', { 
+  timeZone: 'America/Los_Angeles',
+  year: 'numeric',
+  month: 'long', 
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit'
+})}
+IP Address: ${req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'Unknown'}
       `,
     }
 
