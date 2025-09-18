@@ -225,12 +225,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🔄 Attempting password reset for:', email.toLowerCase());
       console.log('🔍 Environment check:', {
         supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
-        redirectUrl: `${window.location.origin}/reset-password`,
+        redirectUrl: `https://parscade-o4i365.js.org/reset-password`,
         currentOrigin: window.location.origin
       });
       
+      // Use the correct production URL for redirects
+      const redirectUrl = window.location.hostname === 'localhost' 
+        ? `${window.location.origin}/reset-password`
+        : 'https://parscade-o4i365.js.org/reset-password';
+      
+      console.log('🔗 Using redirect URL:', redirectUrl);
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: redirectUrl,
       });
 
       if (error) {

@@ -99,15 +99,25 @@ export const validateResetQuery = (queryParams: URLSearchParams): PasswordResetQ
   
   console.log('🔍 All query parameters:', Object.fromEntries(queryParams.entries()));
   
-  // New format (standard Supabase auth URLs)
+  // Check for direct access_token first (after successful Supabase redirect)
   if (queryParams.get('access_token')) {
-    console.log('📋 Using new format (access_token found)');
+    console.log('📋 Using standard format (access_token found)');
     rawParams.access_token = queryParams.get('access_token');
     rawParams.refresh_token = queryParams.get('refresh_token');
     rawParams.expires_in = queryParams.get('expires_in');
     rawParams.token_type = queryParams.get('token_type');
     rawParams.type = queryParams.get('type');
-  } 
+  }
+  // Check for token parameter (some Supabase configurations)
+  else if (queryParams.get('token')) {
+    console.log('📋 Using token parameter format');
+    const token = queryParams.get('token');
+    rawParams.access_token = token;
+    rawParams.refresh_token = token;
+    rawParams.expires_in = '3600';
+    rawParams.token_type = 'bearer';
+    rawParams.type = queryParams.get('type') || 'recovery';
+  }
   // Legacy format (direct token hash)
   else {
     console.log('📋 Checking for legacy format...');
