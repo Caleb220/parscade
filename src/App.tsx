@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import type { FC } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider, ResetPasswordPage, ForgotPasswordPage } from './features/auth';
+import { useAuth } from './features/auth';
 import ErrorBoundary from './components/molecules/ErrorBoundary';
 import HomePage from './features/marketing/pages/HomePage';
 import ProductPage from './features/marketing/pages/ProductPage';
@@ -21,6 +22,52 @@ import type { SeoConfig } from './schemas';
 import { analytics, trackPageView } from './utils/analytics';
 import { logger } from './services/logger';
 import { env } from './config/env';
+import LoadingSpinner from './components/atoms/LoadingSpinner';
+
+/**
+ * Protected Route component that prevents authentication loops
+ */
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+/**
+ * Public Route component that redirects authenticated users
+ */
+const PublicRoute: React.FC<{ children: React.ReactNode; redirectTo?: string }> = ({ 
+  children, 
+  redirectTo = '/dashboard' 
+}) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+  
+  if (isAuthenticated) {
+    return <Navigate to={redirectTo} replace />;
+  }
+  
+  return <>{children}</>;
+};
 
 /**
  * Component to handle route changes and analytics.
@@ -121,15 +168,31 @@ const RouteHandler: FC = () => {
       <Routes location={location} key={location.pathname}>
         <Route path="/" element={<HomePage />} />
         <Route path="/product" element={<ProductPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/account" element={<AccountPage />} />
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/account" element={
+          <ProtectedRoute>
+            <AccountPage />
+          </ProtectedRoute>
+        } />
         <Route path="/billing" element={<BillingPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={
+          <PublicRoute redirectTo="/dashboard">
+            <ResetPasswordPage />
+          </PublicRoute>
+        } />
+        <Route path="/forgot-password" element={
+          <PublicRoute>
+            <ForgotPasswordPage />
+          </PublicRoute>
+        } />
         <Route path="/404" element={<NotFoundPage />} />
         <Route path="/error" element={<ErrorPage />} />
         <Route path="*" element={<NotFoundPage />} />

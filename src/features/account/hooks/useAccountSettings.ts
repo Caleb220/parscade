@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
   AccountSettings,
   AccountSettingsSection,
@@ -40,6 +40,7 @@ export const useAccountSettings = ({ userId, email, fullName }: UseAccountSettin
   const [isLoading, setIsLoading] = useState<boolean>(!!userId);
   const [error, setError] = useState<string | null>(null);
   const [savingSection, setSavingSection] = useState<AccountSettingsSection | null>(null);
+  const loadingRef = useRef<boolean>(false);
 
   const defaults = useMemo(() => {
     if (!userId) return null;
@@ -63,6 +64,12 @@ export const useAccountSettings = ({ userId, email, fullName }: UseAccountSettin
       return;
     }
 
+    // Prevent concurrent loading requests
+    if (loadingRef.current) {
+      return;
+    }
+
+    loadingRef.current = true;
     setIsLoading(true);
     setError(null);
 
@@ -81,6 +88,7 @@ export const useAccountSettings = ({ userId, email, fullName }: UseAccountSettin
       setError(formatErrorForUser(err, 'We could not load your settings.'))
     } finally {
       setIsLoading(false);
+      loadingRef.current = false;
     }
   }, [userId, defaults]);
 

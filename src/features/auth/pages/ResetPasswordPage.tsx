@@ -54,15 +54,21 @@ const ResetPasswordPage: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof PasswordResetForm, string>>>({});
   const [sessionId] = useState(() => generateSessionId());
 
+  // Prevent navigation loops by checking recovery mode only once
+  const recoveryModeRef = useRef<boolean | null>(null);
+
   /**
    * Initialize password reset flow with secure token extraction.
    */
   useEffect(() => {
     // Check if we're in recovery mode
-    const recoveryMode = isRecoveryMode();
-    setInRecoveryMode(recoveryMode);
+    if (recoveryModeRef.current === null) {
+      const recoveryMode = isRecoveryMode();
+      recoveryModeRef.current = recoveryMode;
+      setInRecoveryMode(recoveryMode);
+    }
     
-    if (recoveryMode) {
+    if (recoveryModeRef.current) {
       logger.info('Password reset page loaded in recovery mode', {
         context: { feature: 'password-reset', action: 'recoveryModeDetected' },
       });

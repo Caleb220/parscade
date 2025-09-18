@@ -6,18 +6,7 @@ import AuthLoadingSkeleton from '../../../components/molecules/AuthLoadingSkelet
 import AccountSettingsPanel from '../../account/components/AccountSettingsPanel';
 
 const AccountPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { isAuthenticated, isLoading, user } = useAuth();
-
-  React.useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate('/', { replace: true });
-    }
-  }, [isAuthenticated, isLoading, navigate]);
-
-  if (isLoading) {
-    return <AuthLoadingSkeleton />;
-  }
+  const { user } = useAuth();
 
   return (
     <Layout>

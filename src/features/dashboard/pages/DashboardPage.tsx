@@ -9,16 +9,10 @@ import AuthLoadingSkeleton from '../../../components/molecules/AuthLoadingSkelet
 import StatCardGrid from '../components/StatCardGrid';
 
 const DashboardPage: React.FC = () => {
-  const { isAuthenticated, isEmailConfirmed, isLoading, user, resendConfirmationEmail } = useAuth();
+  const { isEmailConfirmed, user, resendConfirmationEmail } = useAuth();
   const [isResendingEmail, setIsResendingEmail] = React.useState(false);
   const [resendSuccess, setResendSuccess] = React.useState(false);
   const prefersReducedMotion = useReducedMotion();
-
-  React.useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      window.location.replace('/');
-    }
-  }, [isLoading, isAuthenticated]);
 
   const handleResendConfirmation = React.useCallback(async () => {
     if (!user?.email) return;
@@ -43,11 +37,7 @@ const DashboardPage: React.FC = () => {
     [],
   );
 
-  if (isLoading) {
-    return <AuthLoadingSkeleton />;
-  }
-
-  if (isAuthenticated && !isEmailConfirmed) {
+  if (!isEmailConfirmed) {
     return (
       <Layout>
         <section className="bg-gray-50 min-h-screen" aria-labelledby="confirm-email-heading">

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback, useMemo, useRef } from 'react';
 import type { AuthState, AuthContextType, User } from '../types/authTypes';
 import { supabase } from '../../../lib/supabase';
 import type { AuthError, AuthApiError } from '@supabase/supabase-js';
@@ -13,12 +13,13 @@ type AuthAction =
   | { type: 'AUTH_ERROR'; payload: string }
   | { type: 'AUTH_SIGNOUT' }
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'CLEAR_ERROR' };
+  | { type: 'CLEAR_ERROR' }
+  | { type: 'SET_INITIALIZED' };
 
 const authReducer = (state: AuthState, action: AuthAction): AuthState => {
   switch (action.type) {
     case 'AUTH_START':
-      return { ...state, isLoading: true };
+      return { ...state, isLoading: true, error: null };
     case 'AUTH_SUCCESS':
       return {
         ...state,
@@ -49,8 +50,9 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
       return { ...state, isLoading: action.payload };
     case 'CLEAR_ERROR':
       return { ...state, error: null };
+    case 'SET_INITIALIZED':
+      return { ...state, isLoading: false };
     default:
-      // Exhaustive check to ensure all action types are handled
       return state;
   }
 };
@@ -69,11 +71,71 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
+  const initializationRef = useRef(false);
+  const authStateChangeRef = useRef<{ unsubscribe: () => void } | null>(null);
 
+  // Memoized auth state change handler to prevent recreation on every render
+  const handleAuthStateChange = useCallback(
+    async (event: string, session: any): Promise<void> => {
+      // Prevent processing during initial load to avoid double-processing
+      if (!initializationRef.current) {
+        return;
+      }
+
+      logger.debug('Auth state change event', {
+        context: { feature: 'auth', action: 'stateChange' },
+        metadata: { event, hasSession: !!session },
+      });
+
+      if (event === 'SIGNED_IN' && session?.user) {
+        const typedUser = session.user as TypedSupabaseUser;
+        const isEmailConfirmed = Boolean(session.user.email_confirmed_at);
+        
+        dispatch({
+          type: 'AUTH_SUCCESS',
+          payload: {
+            user: typedUser,
+            isEmailConfirmed,
+          },
+        });
+
+        // Set user context for logging
+        logger.setUserContext({
+          id: typedUser.id,
+          email: typedUser.email || undefined,
+          username: typedUser.user_metadata?.full_name || undefined,
+        });
+      } else if (event === 'SIGNED_OUT') {
+        dispatch({ type: 'AUTH_SIGNOUT' });
+        logger.clearUserContext();
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        const typedUser = session.user as TypedSupabaseUser;
+        const isEmailConfirmed = Boolean(session.user.email_confirmed_at);
+        
+        dispatch({
+          type: 'AUTH_SUCCESS',
+          payload: {
+            user: typedUser,
+            isEmailConfirmed,
+          },
+        });
+      }
+    },
+    []
+  );
+
+  // Initialize auth state once on mount
   useEffect(() => {
-    const getInitialSession = async () => {
+    let isMounted = true;
+
+    const initializeAuth = async () => {
       try {
+        logger.debug('Initializing auth state');
+        
         const { data: { session }, error } = await supabase.auth.getSession();
+
+        // Check if component is still mounted
+        if (!isMounted) return;
 
         if (error) {
           logger.warn('Failed to get initial auth session', {
@@ -87,6 +149,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (session?.user) {
           const typedUser = session.user as TypedSupabaseUser;
           const isEmailConfirmed = Boolean(session.user.email_confirmed_at);
+          
           dispatch({
             type: 'AUTH_SUCCESS',
             payload: {
@@ -94,10 +157,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               isEmailConfirmed,
             },
           });
+
+          // Set user context for logging
+          logger.setUserContext({
+            id: typedUser.id,
+            email: typedUser.email || undefined,
+            username: typedUser.user_metadata?.full_name || undefined,
+          });
         } else {
-          dispatch({ type: 'SET_LOADING', payload: false });
+          dispatch({ type: 'SET_INITIALIZED' });
+        }
+
+        // Mark initialization as complete
+        initializationRef.current = true;
+
+        // Set up auth state change listener after initialization
+        if (isMounted) {
+          const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
+          authStateChangeRef.current = subscription;
         }
       } catch (initError) {
+        if (!isMounted) return;
+        
         logger.error('Critical error in auth initialization', {
           context: { feature: 'auth', action: 'initialization' },
           error: initError instanceof Error ? initError : new Error(String(initError)),
@@ -107,41 +188,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     };
 
-    void getInitialSession();
+    void initializeAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session): Promise<void> => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          const typedUser = session.user as TypedSupabaseUser;
-          const isEmailConfirmed = Boolean(session.user.email_confirmed_at);
-          dispatch({
-            type: 'AUTH_SUCCESS',
-            payload: {
-              user: typedUser,
-              isEmailConfirmed,
-            },
-          });
-        } else if (event === 'SIGNED_OUT') {
-          dispatch({ type: 'AUTH_SIGNOUT' });
-        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-          const typedUser = session.user as TypedSupabaseUser;
-          const isEmailConfirmed = Boolean(session.user.email_confirmed_at);
-          dispatch({
-            type: 'AUTH_SUCCESS',
-            payload: {
-              user: typedUser,
-              isEmailConfirmed,
-            },
-          });
-        }
+    return () => {
+      isMounted = false;
+      if (authStateChangeRef.current) {
+        authStateChangeRef.current.unsubscribe();
+        authStateChangeRef.current = null;
       }
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
+    };
+  }, []); // Empty dependency array - only run once on mount
 
   const signIn = useCallback(async (email: string, password: string): Promise<void> => {
     dispatch({ type: 'AUTH_START' });
+    
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
@@ -152,24 +212,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw error;
       }
 
-      if (data.user) {
-        const typedUser = data.user as TypedSupabaseUser;
-        const isEmailConfirmed = Boolean(data.user.email_confirmed_at);
-        dispatch({
-          type: 'AUTH_SUCCESS',
-          payload: {
-            user: typedUser,
-            isEmailConfirmed,
-          },
-        });
-        
-        // Set user context in Sentry
-        logger.setUserContext({
-          id: typedUser.id,
-          email: typedUser.email || undefined,
-          username: typedUser.user_metadata?.full_name || undefined,
-        });
-      }
+      // Success state will be handled by auth state change listener
+      // No need to dispatch here to avoid double state updates
     } catch (authError) {
       const message = authError instanceof AuthError
         ? getAuthErrorMessage(authError)
@@ -181,6 +225,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signUp = useCallback(async (email: string, password: string, fullName: string): Promise<void> => {
     dispatch({ type: 'AUTH_START' });
+    
     try {
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
@@ -196,24 +241,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw error;
       }
 
-      if (data.user) {
-        const typedUser = data.user as TypedSupabaseUser;
-        const isEmailConfirmed = Boolean(data.user.email_confirmed_at);
-        dispatch({
-          type: 'AUTH_SUCCESS',
-          payload: {
-            user: typedUser,
-            isEmailConfirmed,
-          },
-        });
-        
-        // Set user context in Sentry
-        logger.setUserContext({
-          id: typedUser.id,
-          email: typedUser.email || undefined,
-          username: typedUser.user_metadata?.full_name || undefined,
-        });
-      }
+      // Success state will be handled by auth state change listener
+      // No need to dispatch here to avoid double state updates
     } catch (signUpError) {
       const message = signUpError instanceof AuthError
         ? getAuthErrorMessage(signUpError)
@@ -228,25 +257,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       context: { feature: 'auth', action: 'signOut' },
     });
     
-    // Update UI immediately for smooth user experience
-    dispatch({ type: 'AUTH_SIGNOUT' });
-    logger.addBreadcrumb('UI updated for logout', 'auth');
-    
-    // Comprehensive session cleanup
     try {
-      logger.debug('Signing out from Supabase');
+      // Update UI immediately for smooth user experience
+      dispatch({ type: 'AUTH_SIGNOUT' });
+      
+      // Clear user context immediately
+      logger.clearUserContext();
+      
+      // Sign out from Supabase (this will trigger auth state change)
       const { error } = await supabase.auth.signOut();
       if (error) {
         logger.warn('Supabase signout warning', {
           context: { feature: 'auth', action: 'supabaseSignOut' },
           error,
         });
-      } else {
-        logger.debug('Supabase signout completed successfully');
       }
       
-      // Clear all local storage items related to auth
-      logger.debug('Clearing auth-related localStorage items');
+      // Clear auth-related localStorage items
       const keysToRemove = Object.keys(localStorage).filter(key => 
         key.includes('supabase') || 
         key.includes('auth') || 
@@ -265,11 +292,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           });
         }
       });
-      
-      logger.debug(`Cleared ${keysToRemove.length} localStorage items`);
-      
-      // Clear user context from Sentry
-      logger.clearUserContext();
       
     } catch (signOutError) {
       logger.warn('Background signout error occurred', {
@@ -297,10 +319,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         },
       });
       
-      // Use parscade.com as the primary domain for redirects
-      const redirectUrl = window.location.hostname === 'localhost' 
-        ? `${window.location.origin}/reset-password`
-        : 'https://parscade.com/reset-password';
+      // Use current origin for redirects to avoid domain mismatches
+      const redirectUrl = `${window.location.origin}/reset-password`;
       
       logger.debug(`Using redirect URL: ${redirectUrl}`);
       
@@ -322,20 +342,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             code: 'code' in error ? error.code : 'N/A',
           },
         });
-        
-        // Add specific context for 500 errors
-        if ('status' in error && error.status === 500) {
-          logger.error('500 ERROR - Supabase email configuration issue', {
-            context: { feature: 'auth', action: 'resetPasswordConfig' },
-            metadata: {
-              troubleshooting: [
-                'Check Supabase email template uses {{ .ConfirmationURL }}',
-                'Verify SMTP configuration in Supabase',
-                'Ensure Site URL matches domain exactly',
-              ],
-            },
-          });
-        }
         
         throw new Error(getPasswordResetErrorMessage(error));
       }
@@ -382,7 +388,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     dispatch({ type: 'CLEAR_ERROR' });
   }, []);
 
-  const value: AuthContextType = useMemo<AuthContextType>(() => ({
+  // Memoize the context value to prevent unnecessary re-renders
+  const value: AuthContextType = useMemo(() => ({
     ...state,
     signIn,
     signUp,
@@ -397,20 +404,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 /**
  * Converts Supabase password reset errors to user-friendly messages.
- * 
- * @param error - The AuthError from Supabase
- * @returns User-friendly error message
  */
 const getPasswordResetErrorMessage = (error: AuthError | AuthApiError): string => {
-  logger.debug('Analyzing password reset error', {
-    metadata: { 
-      name: error.name, 
-      message: error.message,
-      status: 'status' in error ? error.status : 'N/A',
-    },
-  });
-  
-  // Handle different error types
   if ('status' in error && error.status) {
     switch (error.status) {
       case 500:
@@ -428,7 +423,6 @@ const getPasswordResetErrorMessage = (error: AuthError | AuthApiError): string =
     }
   }
 
-  // Handle specific error messages
   const message = error.message?.toLowerCase() || '';
   
   if (message.includes('internal server error') || message.includes('500')) {
@@ -454,18 +448,12 @@ const getPasswordResetErrorMessage = (error: AuthError | AuthApiError): string =
   if (message.includes('invalid email')) {
     return 'Please enter a valid email address.';
   }
-  
 
-  // Generic fallback
   return `Email service error: ${error.message || 'Please check your Supabase configuration or contact support.'}`;
 };
 
 /**
  * Converts Supabase auth errors to user-friendly messages.
- * Provides consistent error messaging across the application.
- * 
- * @param error - The AuthError from Supabase
- * @returns User-friendly error message
  */
 const getAuthErrorMessage = (error: AuthError): string => {
   switch (error.message) {
@@ -488,10 +476,6 @@ const getAuthErrorMessage = (error: AuthError): string => {
 
 /**
  * Custom hook to access the auth context.
- * Throws an error if used outside of AuthProvider.
- * 
- * @returns The auth context value
- * @throws {Error} If used outside of AuthProvider
  */
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
