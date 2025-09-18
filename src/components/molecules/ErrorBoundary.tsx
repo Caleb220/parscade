@@ -1,8 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import Button from '../atoms/Button';
-import { isZodError, extractZodMessages } from '../../utils/zodError';
-import { logError } from '../../utils/log';
+import { logger } from '../../services/logger';
 
 interface Props {
   children: ReactNode;
@@ -25,9 +24,18 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, _errorInfo: ErrorInfo) {
-    // Avoid dumping sensitive details to the console; emit a minimal dev-only log
-    logError('An unexpected error was caught by ErrorBoundary');
-    // Hook up your error reporting service here (Sentry, etc.) with redacted metadata
+    // Log error with context to Sentry
+    logger.error('React Error Boundary caught an error', {
+      error,
+      context: {
+        feature: 'error-boundary',
+        action: 'component-error',
+      },
+      metadata: {
+        componentStack: errorInfo.componentStack,
+        errorBoundary: 'main',
+      },
+    });
   }
 
   handleReset = () => {
@@ -54,8 +62,8 @@ class ErrorBoundary extends Component<Props, State> {
             <p className="text-gray-600 mb-6">
               We're sorry, but something unexpected happened.
             </p>
-
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            
+            {import.meta.env?.MODE === 'development' && this.state.error && (
               <details className="mb-6 text-left">
                 <summary className="cursor-pointer text-sm text-gray-500 mb-2">
                   Error Details (Development)

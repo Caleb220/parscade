@@ -8,7 +8,7 @@ import Input from '../../../components/atoms/Input';
 import { useAuth } from '../context/AuthContext';
 import { trackFormSubmit } from '../../../utils/analytics';
 import { formatErrorForUser } from '../../../utils/zodError';
-import { logWarn } from '../../../utils/log';
+import { logger } from '../../../services/logger';
 
 /**
  * Forgot Password page component for requesting password reset emails.
@@ -72,10 +72,19 @@ const ForgotPasswordPage: React.FC = () => {
       setDebugInfo(prev => prev + '\n✅ Reset request sent successfully');
       setIsSuccess(true);
     } catch (resetError) {
-      logWarn('Forgot password: reset request failed');
+      logger.warn('Forgot password reset request failed', {
+        context: { 
+          feature: 'auth', 
+          action: 'forgotPasswordRequest',
+          userEmail: trimmedEmail.toLowerCase(),
+        },
+        error: resetError instanceof Error ? resetError : new Error(String(resetError)),
+      });
       
       // Enhanced error logging for debugging
-      console.error('Reset password error details:', resetError);
+      logger.debug('Reset password error details', {
+        metadata: { resetError },
+      });
       
       // Enhanced debug information
       const errorDetails = resetError instanceof Error 

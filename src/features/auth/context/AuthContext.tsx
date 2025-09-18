@@ -2,7 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect, ReactNode, use
 import type { AuthState, AuthContextType, User } from '../types/authTypes';
 import { supabase } from '../../../lib/supabase';
 import type { AuthError, AuthApiError } from '@supabase/supabase-js';
-import { logWarn } from '../../../utils/log';
+import { logger } from '../../../services/logger';
 import type { TypedSupabaseUser } from '../../../types/supabase';
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -76,7 +76,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
-          logWarn('Auth: failed to get session');
+          logger.warn('Failed to get initial auth session', {
+            context: { feature: 'auth', action: 'getInitialSession' },
+            error,
+          });
           dispatch({ type: 'AUTH_ERROR', payload: error.message });
           return;
         }
@@ -95,7 +98,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           dispatch({ type: 'SET_LOADING', payload: false });
         }
       } catch (initError) {
-        logWarn('Auth: error in getInitialSession');
+        logger.error('Critical error in auth initialization', {
+          context: { feature: 'auth', action: 'initialization' },
+          error: initError instanceof Error ? initError : new Error(String(initError)),
+        });
         const errorMessage = initError instanceof Error ? initError.message : 'Failed to initialize authentication';
         dispatch({ type: 'AUTH_ERROR', payload: errorMessage });
       }
@@ -157,6 +163,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           },
         });
       }
+      
+      // Set user context in Sentry
+      logger.setUserContext({
+        id: typedUser.id,
+        email: typedUser.email || undefined,
+        username: typedUser.user_metadata?.full_name || undefined,
+      });
     } catch (authError) {
       const message = authError instanceof AuthError
         ? getAuthErrorMessage(authError)
@@ -194,6 +207,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           },
         });
       }
+      
+      // Set user context in Sentry
+      logger.setUserContext({
+        id: typedUser.id,
+        email: typedUser.email || undefined,
+        username: typedUser.user_metadata?.full_name || undefined,
+      });
     } catch (signUpError) {
       const message = signUpError instanceof AuthError
         ? getAuthErrorMessage(signUpError)
@@ -204,25 +224,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const signOut = useCallback(async (): Promise<void> => {
-    console.log('🔄 Starting logout process...');
+    logger.info('Starting user logout process', {
+      context: { feature: 'auth', action: 'signOut' },
+    });
     
     // Update UI immediately for smooth user experience
     dispatch({ type: 'AUTH_SIGNOUT' });
-    console.log('✅ UI updated - user appears logged out');
+    logger.addBreadcrumb('UI updated for logout', 'auth');
     
     // Comprehensive session cleanup
     try {
-      console.log('🔄 Signing out from Supabase...');
+      logger.debug('Signing out from Supabase');
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.warn('⚠️ Supabase signout warning:', error);
-        logWarn('Auth: supabase signout warning');
+        logger.warn('Supabase signout warning', {
+          context: { feature: 'auth', action: 'supabaseSignOut' },
+          error,
+        });
       } else {
-        console.log('✅ Supabase signout completed successfully');
+        logger.debug('Supabase signout completed successfully');
       }
       
       // Clear all local storage items related to auth
-      console.log('🔄 Clearing local storage...');
+      logger.debug('Clearing auth-related localStorage items');
       const keysToRemove = Object.keys(localStorage).filter(key => 
         key.includes('supabase') || 
         key.includes('auth') || 
@@ -234,27 +258,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           localStorage.removeItem(key);
         } catch (storageError) {
-          console.warn('⚠️ Could not clear localStorage item:', key, storageError);
+          logger.warn('Could not clear localStorage item', {
+            context: { feature: 'auth', action: 'clearStorage' },
+            metadata: { key },
+            error: storageError instanceof Error ? storageError : new Error(String(storageError)),
+          });
         }
       });
       
-      console.log('✅ Cleared', keysToRemove.length, 'localStorage items');
+      logger.debug(`Cleared ${keysToRemove.length} localStorage items`);
+      
+      // Clear user context from Sentry
+      logger.clearUserContext();
       
     } catch (signOutError) {
-      console.warn('⚠️ Background signout error:', signOutError);
-      logWarn('Auth: background signout error occurred');
+      logger.warn('Background signout error occurred', {
+        context: { feature: 'auth', action: 'backgroundSignout' },
+        error: signOutError instanceof Error ? signOutError : new Error(String(signOutError)),
+      });
     }
     
-    console.log('✅ Logout process completed');
+    logger.info('User logout process completed', {
+      context: { feature: 'auth', action: 'signOutComplete' },
+    });
   }, []);
 
   const resetPassword = useCallback(async (email: string): Promise<void> => {
     try {
-      console.log('🔄 Attempting password reset for:', email.toLowerCase());
-      console.log('🔍 Environment check:', {
-        supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
-        currentOrigin: window.location.origin,
-        hostname: window.location.hostname
+      logger.info('Attempting password reset', {
+        context: { 
+          feature: 'auth', 
+          action: 'resetPassword',
+          userEmail: email.toLowerCase(),
+        },
+        metadata: {
+          currentOrigin: window.location.origin,
+          hostname: window.location.hostname,
+        },
       });
       
       // Use parscade.com as the primary domain for redirects
@@ -262,37 +302,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         ? `${window.location.origin}/reset-password`
         : 'https://parscade.com/reset-password';
       
-      console.log('🔗 Using redirect URL:', redirectUrl);
+      logger.debug(`Using redirect URL: ${redirectUrl}`);
       
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
         redirectTo: redirectUrl,
       });
 
       if (error) {
-        console.error('❌ Supabase reset password error:', error);
-        console.error('❌ Error details:', {
-          name: error.name,
-          message: error.message,
-          status: 'status' in error ? error.status : 'N/A',
-          code: 'code' in error ? error.code : 'N/A',
-          details: 'details' in error ? error.details : 'N/A'
+        logger.error('Supabase reset password error', {
+          context: { 
+            feature: 'auth', 
+            action: 'resetPasswordAPI',
+            userEmail: email.toLowerCase(),
+          },
+          error,
+          metadata: {
+            errorName: error.name,
+            status: 'status' in error ? error.status : 'N/A',
+            code: 'code' in error ? error.code : 'N/A',
+          },
         });
         
-        // Add specific troubleshooting for 500 errors
+        // Add specific context for 500 errors
         if ('status' in error && error.status === 500) {
-          console.error('💡 500 ERROR TROUBLESHOOTING:');
-          console.error('   1. Check your Supabase email template uses {{ .ConfirmationURL }}');
-          console.error('   2. Verify SMTP configuration in Supabase');
-          console.error('   3. Ensure Site URL matches your domain exactly');
+          logger.error('500 ERROR - Supabase email configuration issue', {
+            context: { feature: 'auth', action: 'resetPasswordConfig' },
+            metadata: {
+              troubleshooting: [
+                'Check Supabase email template uses {{ .ConfirmationURL }}',
+                'Verify SMTP configuration in Supabase',
+                'Ensure Site URL matches domain exactly',
+              ],
+            },
+          });
         }
         
         throw new Error(getPasswordResetErrorMessage(error));
       }
       
-      console.log('✅ Password reset email request completed successfully');
+      logger.info('Password reset email request completed successfully', {
+        context: { 
+          feature: 'auth', 
+          action: 'resetPasswordSuccess',
+          userEmail: email.toLowerCase(),
+        },
+      });
     } catch (resetError) {
-      console.error('❌ Reset password function error:', resetError);
-      console.error('❌ Complete error object:', resetError);
+      logger.error('Reset password function error', {
+        context: { feature: 'auth', action: 'resetPasswordError' },
+        error: resetError instanceof Error ? resetError : new Error(String(resetError)),
+      });
+      
       const message = resetError instanceof Error 
         ? resetError.message 
         : 'Failed to send reset email. Please try again.';
@@ -342,10 +402,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
  * @returns User-friendly error message
  */
 const getPasswordResetErrorMessage = (error: AuthError | AuthApiError): string => {
-  console.log('🔍 Analyzing error:', { 
-    name: error.name, 
-    message: error.message,
-    status: 'status' in error ? error.status : 'N/A'
+  logger.debug('Analyzing password reset error', {
+    metadata: { 
+      name: error.name, 
+      message: error.message,
+      status: 'status' in error ? error.status : 'N/A',
+    },
   });
   
   // Handle different error types

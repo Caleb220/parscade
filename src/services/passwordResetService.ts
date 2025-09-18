@@ -11,7 +11,7 @@ import {
   type PasswordResetQuery,
 } from '../schemas/auth/passwordReset';
 import { extractErrorMessage, SupabaseServiceError } from './supabaseClient';
-import { logWarn, logError } from '../utils/log';
+import { logger } from './logger';
 import type { AuthError, AuthApiError } from '@supabase/supabase-js';
 
 /**
@@ -74,18 +74,19 @@ const rateLimiter = new PasswordResetRateLimiter();
  */
 export const extractResetTokens = (): PasswordResetQuery | null => {
   try {
-    console.log('🔍 Extracting reset tokens from URL...');
-    console.log('🔍 Current URL:', window.location.href);
+    logger.debug('Extracting reset tokens from URL', {
+      metadata: { currentUrl: window.location.href },
+    });
     
     const rawParams: any = {};
     
     // First, check URL hash (most common for Supabase)
     if (window.location.hash) {
-      console.log('🔍 Found URL hash:', window.location.hash);
+      logger.debug('Found URL hash with potential tokens');
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       
       if (hashParams.get('access_token')) {
-        console.log('✅ Found tokens in URL hash');
+        logger.debug('Found tokens in URL hash');
         rawParams.access_token = hashParams.get('access_token');
         rawParams.refresh_token = hashParams.get('refresh_token') || hashParams.get('access_token');
         rawParams.expires_in = hashParams.get('expires_in') || '3600';
@@ -99,7 +100,7 @@ export const extractResetTokens = (): PasswordResetQuery | null => {
       const searchParams = new URLSearchParams(window.location.search);
       
       if (searchParams.get('access_token')) {
-        console.log('✅ Found tokens in search params');
+        logger.debug('Found tokens in search params');
         rawParams.access_token = searchParams.get('access_token');
         rawParams.refresh_token = searchParams.get('refresh_token');
         rawParams.expires_in = searchParams.get('expires_in');
@@ -116,7 +117,7 @@ export const extractResetTokens = (): PasswordResetQuery | null => {
       );
       
       if (tokenHash) {
-        console.log('✅ Found legacy token format');
+        logger.debug('Found legacy token format');
         rawParams.access_token = tokenHash;
         rawParams.refresh_token = tokenHash;
         rawParams.expires_in = '3600';
@@ -126,22 +127,30 @@ export const extractResetTokens = (): PasswordResetQuery | null => {
     }
     
     if (!rawParams.access_token) {
-      console.log('❌ No reset tokens found in URL');
+      logger.debug('No reset tokens found in URL');
       return null;
     }
     
     // Validate the extracted tokens
     const result = passwordResetQuerySchema.safeParse(rawParams);
     if (!result.success) {
-      console.error('❌ Token validation failed:', result.error.issues);
+      logger.warn('Token validation failed', {
+        context: { feature: 'password-reset', action: 'tokenValidation' },
+        metadata: { issues: result.error.issues },
+      });
       return null;
     }
     
-    console.log('✅ Reset tokens extracted and validated successfully');
+    logger.info('Reset tokens extracted and validated successfully', {
+      context: { feature: 'password-reset', action: 'tokenExtraction' },
+    });
     return result.data;
     
   } catch (error) {
-    console.error('❌ Error extracting reset tokens:', error);
+    logger.error('Error extracting reset tokens', {
+      context: { feature: 'password-reset', action: 'tokenExtraction' },
+      error: error instanceof Error ? error : new Error(String(error)),
+    });
     return null;
   }
 };
@@ -151,12 +160,14 @@ export const extractResetTokens = (): PasswordResetQuery | null => {
  */
 export const establishRecoverySession = async (tokens: PasswordResetQuery): Promise<void> => {
   try {
-    console.log('🔄 Establishing recovery session...');
-    console.log('🔍 Using tokens:', {
-      hasAccessToken: !!tokens.access_token,
-      hasRefreshToken: !!tokens.refresh_token,
-      tokenType: tokens.token_type,
-      type: tokens.type
+    logger.info('Establishing recovery session', {
+      context: { feature: 'password-reset', action: 'establishSession' },
+      metadata: {
+        hasAccessToken: !!tokens.access_token,
+        hasRefreshToken: !!tokens.refresh_token,
+        tokenType: tokens.token_type,
+        type: tokens.type,
+      },
     });
     
     const { error } = await supabase.auth.setSession({
@@ -165,7 +176,10 @@ export const establishRecoverySession = async (tokens: PasswordResetQuery): Prom
     });
 
     if (error) {
-      console.error('❌ SetSession error:', error);
+      logger.error('SetSession error', {
+        context: { feature: 'password-reset', action: 'setSession' },
+        error,
+      });
       throw new SupabaseServiceError(
         getSessionErrorMessage(error),
         error,
@@ -176,7 +190,10 @@ export const establishRecoverySession = async (tokens: PasswordResetQuery): Prom
     // Verify the session was set correctly
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
-      console.error('❌ Session verification error:', sessionError);
+      logger.error('Session verification error', {
+        context: { feature: 'password-reset', action: 'sessionVerification' },
+        error: sessionError,
+      });
       throw new SupabaseServiceError(
         'Session was set but could not be verified',
         sessionError,
@@ -185,19 +202,25 @@ export const establishRecoverySession = async (tokens: PasswordResetQuery): Prom
     }
     
     if (!session) {
-      console.error('❌ No session after setSession call');
+      logger.error('No session after setSession call', {
+        context: { feature: 'password-reset', action: 'sessionVerification' },
+      });
       throw new Error('Failed to establish recovery session');
     }
     
-    console.log('✅ Session established:', {
-      userId: session.user?.id,
-      email: session.user?.email,
-      expiresAt: session.expires_at
+    logger.info('Recovery session established successfully', {
+      context: { feature: 'password-reset', action: 'sessionEstablished' },
+      metadata: {
+        userId: session.user?.id,
+        email: session.user?.email,
+        expiresAt: session.expires_at,
+      },
     });
-    console.log('✅ Recovery session established successfully');
   } catch (err) {
-    console.error('❌ Failed to establish recovery session:', err);
-    logError('Password reset: failed to establish recovery session');
+    logger.error('Failed to establish recovery session', {
+      context: { feature: 'password-reset', action: 'establishSession' },
+      error: err instanceof Error ? err : new Error(String(err)),
+    });
     throw err instanceof SupabaseServiceError ? err : new Error('Session establishment failed');
   }
 };
@@ -236,7 +259,9 @@ export const updateUserPassword = async (
       throw new Error('No active recovery session found. Please request a new password reset link.');
     }
 
-    console.log('🔄 Updating password for authenticated user');
+    logger.info('Updating password for authenticated user', {
+      context: { feature: 'password-reset', action: 'updatePassword' },
+    });
     
     // Update password via Supabase
     const { error } = await supabase.auth.updateUser({
@@ -244,7 +269,10 @@ export const updateUserPassword = async (
     });
 
     if (error) {
-      logWarn('Password reset: failed to update password');
+      logger.warn('Failed to update password', {
+        context: { feature: 'password-reset', action: 'passwordUpdate' },
+        error,
+      });
       throw new SupabaseServiceError(
         getPasswordUpdateErrorMessage(error),
         error,
@@ -252,9 +280,14 @@ export const updateUserPassword = async (
       );
     }
 
-    console.log('✅ Password updated successfully');
+    logger.info('Password updated successfully', {
+      context: { feature: 'password-reset', action: 'passwordUpdateSuccess' },
+    });
   } catch (err) {
-    logError('Password reset: update operation failed');
+    logger.error('Password reset update operation failed', {
+      context: { feature: 'password-reset', action: 'updateOperation' },
+      error: err instanceof Error ? err : new Error(String(err)),
+    });
     
     if (err instanceof SupabaseServiceError) {
       throw err;
@@ -346,10 +379,13 @@ export const generateSessionId = (): string => {
  */
 export const secureSignOut = async (): Promise<void> => {
   try {
-    console.log('🔒 Signing out existing session for security...');
+    logger.debug('Signing out existing session for security');
     await supabase.auth.signOut();
-    console.log('✅ Secure signout completed');
+    logger.debug('Secure signout completed');
   } catch (error) {
-    console.warn('⚠️ Signout warning (non-critical):', error);
+    logger.warn('Signout warning (non-critical)', {
+      context: { feature: 'password-reset', action: 'secureSignOut' },
+      error: error instanceof Error ? error : new Error(String(error)),
+    });
   }
 };
