@@ -85,8 +85,15 @@ class Logger {
   /**
    * Initialize Sentry with proper configuration.
    */
-  initialize(dsn: string, release?: string): void {
+  initialize(dsn?: string, release?: string): void {
     if (this.isInitialized) {
+      return;
+    }
+
+    // Skip Sentry in development if DSN is not accessible
+    if (!dsn || this.isDevelopment) {
+      console.info('🔧 Sentry disabled in development mode');
+      this.isInitialized = true;
       return;
     }
 
@@ -124,13 +131,11 @@ class Logger {
       this.setupGlobalHandlers();
       this.isInitialized = true;
 
-      // Only log initialization in development or critical production events
-      if (this.isDevelopment) {
-        console.info('🚀 Sentry logging initialized');
-      }
+      console.info('🚀 Sentry logging initialized successfully');
     } catch (error) {
       // Fallback to console if Sentry fails to initialize
-      console.error('Failed to initialize Sentry:', error);
+      console.warn('⚠️ Sentry initialization failed, falling back to console logging:', error);
+      this.isInitialized = true; // Mark as initialized so we don't try again
     }
   }
 
@@ -210,38 +215,22 @@ class Logger {
    * Log debug message (development only).
    */
   debug(message: string, options?: { context?: LogContext; metadata?: Record<string, unknown> }): void {
-    const logEntry: LogEntry = {
-      message,
-      level: 'debug',
-      context: options?.context,
-      timestamp: new Date().toISOString(),
-    };
-
     // Only log debug in development
     if (this.isDevelopment) {
       console.debug(`[DEBUG] ${message}`, options?.metadata || '');
     }
-
-    // Don't send debug logs to Sentry unless specifically needed
   }
 
   /**
    * Log info message.
    */
   info(message: string, options?: { context?: LogContext; metadata?: Record<string, unknown> }): void {
-    const logEntry: LogEntry = {
-      message,
-      level: 'info',
-      context: options?.context,
-      timestamp: new Date().toISOString(),
-    };
-
     // Minimal console logging - only critical info
     if (this.isDevelopment || message.includes('🚀')) {
       console.info(`[INFO] ${message}`);
     }
 
-    if (this.isInitialized) {
+    if (this.isInitialized && this.isProduction) {
       Sentry.addBreadcrumb({
         message,
         level: 'info',
@@ -254,20 +243,12 @@ class Logger {
    * Log warning message.
    */
   warn(message: string, options?: { context?: LogContext; metadata?: Record<string, unknown>; error?: Error }): void {
-    const logEntry: LogEntry = {
-      message,
-      level: 'warn',
-      context: options?.context,
-      error: options?.error,
-      timestamp: new Date().toISOString(),
-    };
-
     // Don't flood console - warnings go to Sentry
     if (this.isDevelopment) {
       console.warn(`[WARN] ${message}`, options?.metadata || '');
     }
 
-    if (this.isInitialized) {
+    if (this.isInitialized && this.isProduction) {
       Sentry.withScope((scope) => {
         if (options?.context) {
           scope.setContext('logContext', sanitizeData(options.context) as Record<string, unknown>);
@@ -289,20 +270,12 @@ class Logger {
    * Log error message.
    */
   error(message: string, options?: { context?: LogContext; metadata?: Record<string, unknown>; error?: Error }): void {
-    const logEntry: LogEntry = {
-      message,
-      level: 'error',
-      context: options?.context,
-      error: options?.error,
-      timestamp: new Date().toISOString(),
-    };
-
     // Critical errors might need console output in production for immediate debugging
     if (this.isDevelopment || (this.isProduction && message.includes('CRITICAL'))) {
       console.error(`[ERROR] ${message}`, options?.error || options?.metadata || '');
     }
 
-    if (this.isInitialized) {
+    if (this.isInitialized && this.isProduction) {
       Sentry.withScope((scope) => {
         if (options?.context) {
           scope.setContext('logContext', sanitizeData(options.context) as Record<string, unknown>);
@@ -324,18 +297,10 @@ class Logger {
    * Log fatal error (critical system failure).
    */
   fatal(message: string, options?: { context?: LogContext; metadata?: Record<string, unknown>; error?: Error }): void {
-    const logEntry: LogEntry = {
-      message,
-      level: 'fatal',
-      context: options?.context,
-      error: options?.error,
-      timestamp: new Date().toISOString(),
-    };
-
     // Fatal errors always go to console for immediate attention
     console.error(`[FATAL] ${message}`, options?.error || options?.metadata || '');
 
-    if (this.isInitialized) {
+    if (this.isInitialized && this.isProduction) {
       Sentry.withScope((scope) => {
         scope.setLevel('fatal');
         
@@ -359,7 +324,7 @@ class Logger {
    * Capture exception with context.
    */
   captureException(error: Error, context?: LogContext, metadata?: Record<string, unknown>): void {
-    if (!this.isInitialized) {
+    if (!this.isInitialized || !this.isProduction) {
       if (this.isDevelopment) {
         console.error('Exception:', error);
       }
@@ -382,7 +347,7 @@ class Logger {
    * Start a new transaction for performance monitoring.
    */
   startTransaction(name: string, op: string): ReturnType<typeof Sentry.startTransaction> | null {
-    if (!this.isInitialized) return null;
+    if (!this.isInitialized || !this.isProduction) return null;
     
     return Sentry.startTransaction({
       name,
