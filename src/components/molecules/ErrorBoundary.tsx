@@ -22,10 +22,13 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, _errorInfo: ErrorInfo) {
-    // Log error to console
-    console.error('React Error Boundary caught an error:', error);
-    console.error('Component stack:', errorInfo?.componentStack);
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Log error securely without exposing sensitive data
+    console.error('React Error Boundary caught an error:', error.message);
+    
+    if (errorInfo?.componentStack) {
+      console.error('Component stack:', errorInfo.componentStack);
+    }
   }
 
   handleReset = () => {
@@ -50,7 +53,7 @@ class ErrorBoundary extends Component<Props, State> {
             </h1>
             
             <p className="text-gray-600 mb-6">
-              We're sorry, but something unexpected happened.
+              We're sorry, but something unexpected happened. Please try again.
             </p>
             
             {import.meta.env?.MODE === 'development' && this.state.error && (

@@ -1,12 +1,24 @@
-import { passwordStrengthSchema, type PasswordStrength } from '../schemas';
+/**
+ * Enterprise-grade password validation utilities.
+ * Implements comprehensive security requirements for password strength.
+ */
 
+export interface PasswordStrength {
+  readonly score: number;
+  readonly feedback: readonly string[];
+  readonly isValid: boolean;
+}
+
+/**
+ * Validates password strength according to enterprise security requirements.
+ */
 export const validatePassword = (password: string): PasswordStrength => {
   const feedback: string[] = [];
   let score = 0;
 
-  // Length check
-  if (password.length < 8) {
-    feedback.push('At least 8 characters required');
+  // Length check (minimum 12 characters for enterprise)
+  if (password.length < 12) {
+    feedback.push('At least 12 characters required');
   } else {
     score += 1;
   }
@@ -45,20 +57,23 @@ export const validatePassword = (password: string): PasswordStrength => {
     score = Math.max(0, score - 1);
   }
 
-  if (/123|abc|qwe|password|admin/i.test(password)) {
+  if (/123|abc|qwe|password|admin|user|test|12345678/i.test(password)) {
     feedback.push('Avoid common patterns');
     score = Math.max(0, score - 1);
   }
 
   const isValid = score >= 5 && feedback.length === 0;
 
-  return passwordStrengthSchema.parse({
+  return {
     score: Math.min(score, 5),
     feedback,
     isValid,
-  });
+  };
 };
 
+/**
+ * Gets password strength label for display.
+ */
 export const getPasswordStrengthLabel = (score: number): string => {
   switch (score) {
     case 0:
@@ -77,6 +92,9 @@ export const getPasswordStrengthLabel = (score: number): string => {
   }
 };
 
+/**
+ * Gets password strength color for display.
+ */
 export const getPasswordStrengthColor = (score: number): string => {
   switch (score) {
     case 0:

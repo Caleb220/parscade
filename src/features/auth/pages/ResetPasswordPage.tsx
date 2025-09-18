@@ -14,20 +14,17 @@ import {
   generateSessionId,
   isRecoveryMode,
   completeRecoveryFlow,
-} from '../../../services/passwordResetService';
-import {
-  passwordResetFormSchema,
+  validatePasswordStrength,
+  validatePasswordResetForm,
   type PasswordResetForm,
-  type PasswordResetQuery,
-} from '../../../schemas/auth/passwordReset';
-import { validatePassword } from '../../../utils/passwordValidation';
-import { formatErrorForUser } from '../../../utils/zodError';
+  type PasswordResetTokens,
+} from '../../../services/passwordResetService';
 import { logger } from '../../../services/logger';
 import { trackFormSubmit } from '../../../utils/analytics';
 
 /**
  * Enterprise-grade Reset Password page component.
- * Handles secure password reset flow with recovery mode detection.
+ * Handles secure password reset flow with comprehensive validation and error handling.
  */
 const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
@@ -43,9 +40,8 @@ const ResetPasswordPage: React.FC = () => {
   const [isComplete, setIsComplete] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [attempts, setAttempts] = useState<number>(0);
   const [isValidSession, setIsValidSession] = useState<boolean>(false);
-  const [resetTokens, setResetTokens] = useState<PasswordResetQuery | null>(null);
+  const [resetTokens, setResetTokens] = useState<PasswordResetTokens | null>(null);
   const [inRecoveryMode, setInRecoveryMode] = useState<boolean>(false);
   const [isAutoLoggedIn, setIsAutoLoggedIn] = useState<boolean>(false);
   
@@ -54,27 +50,25 @@ const ResetPasswordPage: React.FC = () => {
     confirmPassword: false,
   });
   
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof PasswordResetForm, string>>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [sessionId] = useState(() => generateSessionId());
 
-  // Prevent navigation loops by checking recovery mode only once
+  // Prevent navigation loops
   const recoveryModeRef = useRef<boolean | null>(null);
+  const initializationRef = useRef<boolean>(false);
 
   /**
-   * Initialize password reset flow with auto-login detection.
+   * Initialize password reset flow.
    */
   useEffect(() => {
-    // Check if we're in recovery mode
+    if (initializationRef.current) return;
+    initializationRef.current = true;
+
+    // Check recovery mode
     if (recoveryModeRef.current === null) {
       const recoveryMode = isRecoveryMode();
       recoveryModeRef.current = recoveryMode;
       setInRecoveryMode(recoveryMode);
-    }
-    
-    if (recoveryModeRef.current) {
-      logger.info('Password reset page loaded in recovery mode', {
-        context: { feature: 'password-reset', action: 'recoveryModeDetected' },
-      });
     }
 
     const initializeResetFlow = async (): Promise<void> => {
@@ -83,11 +77,15 @@ const ResetPasswordPage: React.FC = () => {
           context: { feature: 'password-reset', action: 'initialization' },
         });
         
+        // Wait for auth loading to complete
+        if (authLoading) {
+          return;
+        }
+        
         // Check if user is already authenticated from reset link (auto-login scenario)
-        if (isAuthenticated && user && !authLoading) {
+        if (isAuthenticated && user) {
           logger.info('User auto-logged in from reset link', {
             context: { feature: 'password-reset', action: 'autoLoginDetected' },
-            metadata: { userId: user.id, email: user.email },
           });
           
           setIsAutoLoggedIn(true);
@@ -96,24 +94,19 @@ const ResetPasswordPage: React.FC = () => {
           return;
         }
         
-        // If not auto-logged in, try token-based flow
+        // Try token-based flow
         const tokens = extractResetTokens();
         if (!tokens) {
-          // If no tokens and not authenticated, this is an invalid reset link
-          if (!isAuthenticated) {
-            setError('Invalid password reset link. Please request a new one.');
-          }
+          setError('Invalid or missing password reset tokens. Please request a new reset link.');
           setIsLoading(false);
           return;
         }
         
-        logger.debug('Reset tokens extracted successfully');
         setResetTokens(tokens);
         
-        // Establish recovery session using extracted tokens
+        // Establish recovery session
         await establishRecoverySession(tokens);
         
-        // Mark session as valid
         setIsValidSession(true);
         setIsLoading(false);
         setError(null);
@@ -129,18 +122,15 @@ const ResetPasswordPage: React.FC = () => {
         });
         
         setIsLoading(false);
-        setError(formatErrorForUser(error, 'Failed to initialize password reset. Please request a new reset link.'));
+        setError('Failed to initialize password reset. Please request a new reset link.');
       }
     };
 
-    // Only initialize if auth loading is complete
-    if (!authLoading) {
-      void initializeResetFlow();
-    }
+    void initializeResetFlow();
   }, [isAuthenticated, user, authLoading]);
 
   /**
-   * Handle form input changes with real-time validation.
+   * Handle form input changes.
    */
   const handleInputChange = useCallback(
     (field: keyof PasswordResetForm) =>
@@ -169,7 +159,7 @@ const ResetPasswordPage: React.FC = () => {
   );
 
   /**
-   * Toggle password visibility for better UX.
+   * Toggle password visibility.
    */
   const togglePasswordVisibility = useCallback(
     (field: keyof typeof showPasswords) => (): void => {
@@ -182,87 +172,53 @@ const ResetPasswordPage: React.FC = () => {
   );
 
   /**
-   * Validate form data and show inline errors.
-   */
-  const validateForm = useCallback((): boolean => {
-    const validation = passwordResetFormSchema.safeParse(formData);
-    
-    if (validation.success) {
-      setFieldErrors({});
-      return true;
-    }
-
-    const errors: Partial<Record<keyof PasswordResetForm, string>> = {};
-    validation.error.issues.forEach(issue => {
-      const field = issue.path[0] as keyof PasswordResetForm;
-      if (field && !errors[field]) {
-        errors[field] = issue.message;
-      }
-    });
-
-    setFieldErrors(errors);
-    return false;
-  }, [formData]);
-
-  /**
    * Handle password reset form submission.
    */
   const handleSubmit = useCallback(async (event: React.FormEvent): Promise<void> => {
     event.preventDefault();
 
-    if (!validateForm()) {
+    // Validate form
+    const validation = validatePasswordResetForm(formData);
+    if (!validation.isValid) {
+      setFieldErrors(validation.errors);
       return;
     }
 
     setIsSubmitting(true);
     setError(null);
-    setAttempts(prev => prev + 1);
+    setFieldErrors({});
 
     try {
       await updateUserPassword(formData, sessionId);
       
-      // Track successful reset
       trackFormSubmit('password-reset', true);
-      
       setIsComplete(true);
 
-      // Handle redirect based on recovery mode
-      if (inRecoveryMode) {
-        // In recovery mode: complete the flow properly
-        setTimeout(async () => {
-          await completeRecoveryFlow(true); // Sign out and redirect to home
-        }, 2000);
-      } else {
-        // Normal flow: redirect to home
-        setTimeout(() => {
-          navigate('/', { replace: true });
-        }, 2000);
-      }
+      // Complete recovery flow after delay
+      setTimeout(async () => {
+        await completeRecoveryFlow();
+      }, 2000);
 
     } catch (error) {
-      logger.warn('Reset password: form submission failed', {
+      logger.warn('Password reset submission failed', {
         context: { feature: 'password-reset', action: 'formSubmission' },
         error: error instanceof Error ? error : new Error(String(error)),
       });
       
-      // Track failed reset
       trackFormSubmit('password-reset', false);
-      
-      setError(formatErrorForUser(error));
+      setError(error instanceof Error ? error.message : 'Failed to update password');
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, sessionId, validateForm, navigate, inRecoveryMode]);
+  }, [formData, sessionId]);
 
-  /**
-   * Get password strength for real-time feedback.
-   */
-  const passwordStrength = formData.password ? validatePassword(formData.password) : null;
+  // Get password strength for display
+  const passwordStrength = formData.password ? validatePasswordStrength(formData.password) : null;
 
   // Choose layout based on recovery mode
   const LayoutComponent = inRecoveryMode ? RecoveryLayout : Layout;
 
-  // Loading state during token validation or auth loading
+  // Loading state
   if (isLoading || authLoading) {
     return (
       <LayoutComponent>
@@ -274,10 +230,10 @@ const ResetPasswordPage: React.FC = () => {
           >
             <LoadingSpinner size="lg" className="mx-auto mb-6" />
             <h1 className="text-xl font-semibold text-gray-900 mb-2">
-              {authLoading ? 'Loading...' : 'Validating Reset Link'}
+              Validating Reset Link
             </h1>
             <p className="text-gray-600">
-              {authLoading ? 'Checking authentication status...' : 'Please wait while we verify your password reset request.'}
+              Please wait while we verify your password reset request.
             </p>
           </motion.div>
         </div>
@@ -285,7 +241,7 @@ const ResetPasswordPage: React.FC = () => {
     );
   }
 
-  // Error state for invalid tokens (only show if not auto-logged in)
+  // Error state for invalid tokens
   if (!isValidSession && !isAutoLoggedIn && error) {
     return (
       <LayoutComponent>
@@ -309,7 +265,6 @@ const ResetPasswordPage: React.FC = () => {
                 onClick={() => navigate('/forgot-password')}
                 size="lg"
                 fullWidth
-                disabled={inRecoveryMode} // Block navigation in recovery mode
               >
                 Request New Reset Link
               </Button>
@@ -318,7 +273,6 @@ const ResetPasswordPage: React.FC = () => {
                 onClick={() => navigate('/')}
                 size="lg"
                 fullWidth
-                disabled={inRecoveryMode} // Block navigation in recovery mode
               >
                 Back to Home
               </Button>
@@ -351,23 +305,19 @@ const ResetPasswordPage: React.FC = () => {
               Password Updated Successfully!
             </h1>
             <p className="text-gray-600 mb-6">
-              Your password has been updated successfully. Please sign in with your new password.
+              Your password has been updated. You will be redirected to sign in with your new password.
             </p>
-            <Button
-              onClick={() => navigate('/')}
-              rightIcon={<ArrowRight className="w-4 h-4" />}
-              size="lg"
-              fullWidth
-            >
-              Sign In
-            </Button>
+            <div className="flex items-center justify-center text-sm text-gray-500">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              Redirecting...
+            </div>
           </motion.div>
         </div>
       </LayoutComponent>
     );
   }
 
-  // Main reset password form (show if valid session OR auto-logged in)
+  // Main reset password form
   if (!isValidSession && !isAutoLoggedIn) {
     return (
       <LayoutComponent>
@@ -419,10 +369,7 @@ const ResetPasswordPage: React.FC = () => {
               Set New Password
             </h1>
             <p className="text-gray-600">
-              {inRecoveryMode 
-                ? 'Choose a strong password to secure your account.'
-                : 'Choose a strong password to secure your Parscade account.'
-              }
+              Choose a strong password to secure your Parscade account.
             </p>
           </div>
 
@@ -471,32 +418,29 @@ const ResetPasswordPage: React.FC = () => {
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-gray-600">Password strength</span>
                     <span className={`text-xs font-medium ${
-                      passwordStrength.score >= 4 ? 'text-green-600' : 
-                      passwordStrength.score >= 3 ? 'text-yellow-600' : 'text-red-600'
+                      passwordStrength.isValid ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      {passwordStrength.score >= 4 ? 'Strong' : 
-                       passwordStrength.score >= 3 ? 'Good' : 'Weak'}
+                      {passwordStrength.isValid ? 'Strong' : 'Weak'}
                     </span>
                   </div>
-                  <div className="flex space-x-1">
+                  <div className="flex space-x-1 mb-2">
                     {Array.from({ length: 5 }, (_, index) => (
                       <div
                         key={index}
                         className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
-                          index < passwordStrength.score
-                            ? passwordStrength.score >= 4 ? 'bg-green-500' :
-                              passwordStrength.score >= 3 ? 'bg-yellow-500' : 'bg-red-500'
+                          passwordStrength.isValid && index < 5
+                            ? 'bg-green-500'
                             : 'bg-gray-200'
                         }`}
                       />
                     ))}
                   </div>
-                  {passwordStrength.feedback.length > 0 && (
-                    <ul className="mt-2 text-xs text-gray-600 space-y-1">
-                      {passwordStrength.feedback.slice(0, 3).map((feedback, index) => (
+                  {passwordStrength.errors.length > 0 && (
+                    <ul className="text-xs text-gray-600 space-y-1">
+                      {passwordStrength.errors.slice(0, 3).map((error, index) => (
                         <li key={index} className="flex items-center">
                           <span className="w-1 h-1 bg-gray-400 rounded-full mr-2 flex-shrink-0" />
-                          {feedback}
+                          {error}
                         </li>
                       ))}
                     </ul>
@@ -570,7 +514,7 @@ const ResetPasswordPage: React.FC = () => {
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-xs text-blue-800">
               <strong>Security Notice:</strong> This password reset link is valid for one use only
-              and will expire in 24 hours. 
+              and will expire in 24 hours.
               {inRecoveryMode && ' You cannot navigate away during the recovery process.'}
             </p>
           </div>

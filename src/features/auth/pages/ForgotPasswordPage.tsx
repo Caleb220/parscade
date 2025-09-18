@@ -1,13 +1,12 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, CheckCircle, AlertCircle, ArrowLeft, Bug } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Mail, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Layout from '../../../components/templates/Layout';
 import Button from '../../../components/atoms/Button';
 import Input from '../../../components/atoms/Input';
 import { useAuth } from '../context/AuthContext';
 import { trackFormSubmit } from '../../../utils/analytics';
-import { formatErrorForUser } from '../../../utils/zodError';
 import { logger } from '../../../services/logger';
 
 /**
@@ -15,7 +14,6 @@ import { logger } from '../../../services/logger';
  * Provides secure email-based password reset flow with rate limiting.
  */
 const ForgotPasswordPage: React.FC = () => {
-  const navigate = useNavigate();
   const { resetPassword } = useAuth();
   
   const [email, setEmail] = useState<string>('');
@@ -23,8 +21,10 @@ const ForgotPasswordPage: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [attempts, setAttempts] = useState<number>(0);
-  const [debugInfo, setDebugInfo] = useState<string>('');
-  const [showDebug, setShowDebug] = useState<boolean>(process.env.NODE_ENV === 'development');
+
+  // Rate limiting configuration
+  const MAX_ATTEMPTS = 3;
+  const isRateLimited = attempts >= MAX_ATTEMPTS;
 
   /**
    * Validate email format.
@@ -40,8 +40,7 @@ const ForgotPasswordPage: React.FC = () => {
   const handleSubmit = useCallback(async (event: React.FormEvent): Promise<void> => {
     event.preventDefault();
     
-    // Rate limiting - max 3 attempts
-    if (attempts >= 3) {
+    if (isRateLimited) {
       setError('Too many reset requests. Please wait 15 minutes before trying again.');
       return;
     }
@@ -61,60 +60,31 @@ const ForgotPasswordPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     setAttempts(prev => prev + 1);
-    setDebugInfo(`Attempting reset for: ${trimmedEmail.toLowerCase()}`);
 
     try {
       await resetPassword(trimmedEmail);
       
-      // Track successful request
       trackFormSubmit('forgot-password', true);
-      
-      setDebugInfo(prev => prev + '\n✅ Reset request sent successfully');
       setIsSuccess(true);
     } catch (resetError) {
-      logger.warn('Forgot password reset request failed', {
+      logger.warn('Forgot password request failed', {
         context: { 
           feature: 'auth', 
           action: 'forgotPasswordRequest',
-          userEmail: trimmedEmail.toLowerCase(),
         },
         error: resetError instanceof Error ? resetError : new Error(String(resetError)),
       });
       
-      // Enhanced error logging for debugging
-      logger.debug('Reset password error details', {
-        metadata: { resetError },
-      });
-      
-      // Enhanced debug information
-      const errorDetails = resetError instanceof Error 
-        ? {
-            name: resetError.name,
-            message: resetError.message,
-            stack: resetError.stack?.split('\n').slice(0, 3).join('\n')
-          }
-        : { error: 'Unknown error type', value: resetError };
-      
-      setDebugInfo(prev => prev + `\n❌ Error Details:\n${JSON.stringify(errorDetails, null, 2)}`);
-      
-      // Track failed request
       trackFormSubmit('forgot-password', false);
       
-      // Enhanced error message handling
-      let errorMessage = 'Failed to send password reset email. Please try again.';
-      
-      if (resetError instanceof Error) {
-        errorMessage = resetError.message;
-      } else {
-        errorMessage = formatErrorForUser(resetError, 'Failed to send password reset email. Please try again.');
-      }
-      
+      const errorMessage = resetError instanceof Error 
+        ? resetError.message 
+        : 'Failed to send password reset email. Please try again.';
       setError(errorMessage);
-      setDebugInfo(prev => prev + `\n🔍 User message: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
-  }, [email, attempts, resetPassword, validateEmail]);
+  }, [email, isRateLimited, resetPassword, validateEmail]);
 
   /**
    * Handle email input change.
@@ -122,7 +92,6 @@ const ForgotPasswordPage: React.FC = () => {
   const handleEmailChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
     setEmail(event.target.value);
     
-    // Clear errors when user starts typing
     if (error) {
       setError(null);
     }
@@ -202,7 +171,7 @@ const ForgotPasswordPage: React.FC = () => {
               Forgot Password?
             </h1>
             <p className="text-gray-600">
-              No worries! Enter your email address and we'll send you a link to reset your password.
+              Enter your email address and we'll send you a link to reset your password.
             </p>
           </div>
 
@@ -227,9 +196,9 @@ const ForgotPasswordPage: React.FC = () => {
               >
                 <AlertCircle className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0" />
                 <span className="text-sm text-yellow-700">
-                  {attempts >= 3 ? 
+                  {isRateLimited ? 
                     'Maximum attempts reached. Please wait 15 minutes.' :
-                    `${3 - attempts} attempt${3 - attempts === 1 ? '' : 's'} remaining.`
+                    `${MAX_ATTEMPTS - attempts} attempt${MAX_ATTEMPTS - attempts === 1 ? '' : 's'} remaining.`
                   }
                 </span>
               </motion.div>
@@ -240,7 +209,7 @@ const ForgotPasswordPage: React.FC = () => {
               fullWidth
               size="lg"
               isLoading={isLoading}
-              disabled={attempts >= 3}
+              disabled={isRateLimited}
             >
               {isLoading ? 'Sending Reset Link...' : 'Send Reset Link'}
             </Button>
@@ -265,55 +234,6 @@ const ForgotPasswordPage: React.FC = () => {
               may not be associated with an account.
             </p>
           </div>
-
-          {/* Debug Information (Development Only) */}
-          {showDebug && debugInfo && (
-            <div className="mt-6 p-4 bg-gray-100 border border-gray-300 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700 flex items-center">
-                  <Bug className="w-4 h-4 mr-1" />
-                  Debug Info (Dev Only)
-                </span>
-                <button
-                  onClick={() => setShowDebug(false)}
-                  className="text-xs text-gray-500 hover:text-gray-700"
-                >
-                  Hide
-                </button>
-              </div>
-              <pre className="text-xs text-gray-600 whitespace-pre-wrap font-mono max-h-40 overflow-y-auto">
-                {debugInfo}
-              </pre>
-              
-              {/* Quick Actions for Development */}
-              <div className="mt-3 pt-3 border-t border-gray-300 flex gap-2">
-                <button
-                  onClick={() => setDebugInfo('')}
-                  className="text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded"
-                >
-                  Clear Log
-                </button>
-                <button
-                  onClick={() => navigator.clipboard.writeText(debugInfo)}
-                  className="text-xs px-2 py-1 bg-blue-100 hover:bg-blue-200 rounded"
-                >
-                  Copy Log
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Debug Toggle (Development Only) */}
-          {process.env.NODE_ENV === 'development' && !showDebug && (
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => setShowDebug(true)}
-                className="text-xs text-gray-500 hover:text-gray-700 underline"
-              >
-                Show Debug Info
-              </button>
-            </div>
-          )}
         </motion.div>
       </div>
     </Layout>

@@ -319,18 +319,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         context: { 
           feature: 'auth', 
           action: 'resetPassword',
-          userEmail: email.toLowerCase(),
         },
         metadata: {
           currentOrigin: window.location.origin,
-          hostname: window.location.hostname,
         },
       });
       
       // Use current origin for redirects to avoid domain mismatches
       const redirectUrl = `${window.location.origin}/reset-password`;
-      
-      logger.debug(`Using redirect URL: ${redirectUrl}`);
       
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
         redirectTo: redirectUrl,
@@ -341,14 +337,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           context: { 
             feature: 'auth', 
             action: 'resetPasswordAPI',
-            userEmail: email.toLowerCase(),
           },
           error,
-          metadata: {
-            errorName: error.name,
-            status: 'status' in error ? error.status : 'N/A',
-            code: 'code' in error ? error.code : 'N/A',
-          },
         });
         
         throw new Error(getPasswordResetErrorMessage(error));
@@ -358,7 +348,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         context: { 
           feature: 'auth', 
           action: 'resetPasswordSuccess',
-          userEmail: email.toLowerCase(),
         },
       });
     } catch (resetError) {
