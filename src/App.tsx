@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
+import type { FC } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
-import { AuthProvider } from './features/auth';
+import { AuthProvider, ResetPasswordPage, ForgotPasswordPage } from './features/auth';
 import ErrorBoundary from './components/molecules/ErrorBoundary';
 import HomePage from './features/marketing/pages/HomePage';
 import ProductPage from './features/marketing/pages/ProductPage';
@@ -15,16 +16,20 @@ import TermsPage from './features/marketing/pages/TermsPage';
 import NotFoundPage from './features/marketing/pages/NotFoundPage';
 import ErrorPage from './features/marketing/pages/ErrorPage';
 import { updateSEO, defaultSEO } from './utils/seo';
+import type { SeoConfig } from './schemas';
 import { analytics, trackPageView } from './utils/analytics';
 import { env } from './config/env';
 
-// Component to handle route changes and analytics
-const RouteHandler: React.FC = () => {
+/**
+ * Component to handle route changes and analytics.
+ * Manages SEO updates and page view tracking for different routes.
+ */
+const RouteHandler: FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Update SEO based on route
-    const routeSEO = {
+    // Define SEO configuration for each route
+    const routeSEO: Record<string, Partial<SeoConfig>> = {
       '/': {
         title: 'Parscade',
         description: 'Intelligent document parsing platform that automatically extracts, structures, and delivers data from any document format with enterprise-grade accuracy.',
@@ -69,9 +74,17 @@ const RouteHandler: React.FC = () => {
         title: 'Parscade',
         description: 'An unexpected error occurred.',
       },
-    };
+      '/reset-password': {
+        title: 'Parscade - Reset Password',
+        description: 'Set a new password for your Parscade account.',
+      },
+      '/forgot-password': {
+        title: 'Parscade - Forgot Password',
+        description: 'Request a password reset link for your Parscade account.',
+      },
+    } as const;
 
-    const currentRoute = routeSEO[location.pathname as keyof typeof routeSEO];
+    const currentRoute = routeSEO[location.pathname];
     updateSEO({
       ...defaultSEO,
       ...currentRoute,
@@ -94,6 +107,8 @@ const RouteHandler: React.FC = () => {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/404" element={<NotFoundPage />} />
         <Route path="/error" element={<ErrorPage />} />
         <Route path="*" element={<NotFoundPage />} />
@@ -102,9 +117,13 @@ const RouteHandler: React.FC = () => {
   );
 };
 
-const App: React.FC = () => {
+/**
+ * Main application component.
+ * Sets up providers, routing, and analytics initialization.
+ */
+const App: FC = () => {
   useEffect(() => {
-    // Initialize analytics
+    // Initialize analytics if API key is available
     if (env.analytics.key) {
       analytics.init(env.analytics.key);
     }

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Zap, Database, Send } from 'lucide-react';
-import { PipelineStep } from '../../types';
+import type { PipelineStep } from '../../../types';
 import StepNavigator from '../../../components/molecules/StepNavigator';
 
-const pipelineSteps: PipelineStep[] = [
+const pipelineSteps: readonly PipelineStep[] = [
   {
     id: '1',
     title: 'Document Ingestion',
@@ -37,18 +37,24 @@ const pipelineSteps: PipelineStep[] = [
     icon: 'Send',
     status: 'pending',
   },
-];
+] as const;
 
+/**
+ * Maps string icon names to Lucide React components.
+ * Provides type safety for icon rendering.
+ */
 const iconMap = {
   FileText,
   Zap,
   Database,
   Send,
-};
+} as const;
+
+type IconName = keyof typeof iconMap;
 
 interface PipelineCarouselProps {
-  autoPlay?: boolean;
-  interval?: number;
+  readonly autoPlay?: boolean;
+  readonly interval?: number;
 }
 
 const PipelineCarousel: React.FC<PipelineCarouselProps> = ({
@@ -75,6 +81,7 @@ const PipelineCarousel: React.FC<PipelineCarouselProps> = ({
       const timer = setInterval(nextStep, interval);
       return () => clearInterval(timer);
     }
+    return undefined;
   }, [autoPlay, interval, isHovered, nextStep]);
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
@@ -91,7 +98,11 @@ const PipelineCarousel: React.FC<PipelineCarouselProps> = ({
   }, [handleKeyDown]);
 
   const currentStepData = pipelineSteps[currentStep];
-  const IconComponent = iconMap[currentStepData.icon as keyof typeof iconMap];
+  if (!currentStepData) {
+    throw new Error(`Invalid step index: ${currentStep}`);
+  }
+  
+  const IconComponent = iconMap[currentStepData.icon as IconName];
 
   // Convert pipeline steps to navigator format
   const navigatorSteps = pipelineSteps.map(step => ({
@@ -172,13 +183,13 @@ const PipelineCarousel: React.FC<PipelineCarouselProps> = ({
         </div>
 
         <div>
-        {/* Step Navigator */}
-        <StepNavigator
-          steps={navigatorSteps}
-          currentStep={currentStep}
-          onStepChange={goToStep}
-          className="mt-8 sm:mb-8"
-        />
+          {/* Step Navigator */}
+          <StepNavigator
+            steps={navigatorSteps}
+            currentStep={currentStep}
+            onStepChange={goToStep}
+            className="mt-8 sm:mb-8"
+          />
          </div>
       </div>
     </div>

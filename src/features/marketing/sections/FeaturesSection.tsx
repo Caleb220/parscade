@@ -12,6 +12,9 @@ import {
   Globe
 } from 'lucide-react';
 import FeatureCard from '../../../components/molecules/FeatureCard';
+import Button from '../../../components/atoms/Button';
+import { useAuth } from '../../auth';
+import { useNavigate } from 'react-router-dom';
 
 const features = [
   {
@@ -62,6 +65,18 @@ const features = [
 ];
 
 const FeaturesSection: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  const handleJoinBetaClick = (): void => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      // Scroll to top to show the auth modal from hero section
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   return (
     <section className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -110,12 +125,12 @@ const FeaturesSection: React.FC = () => {
               Join our beta program and help us build the future of document processing. Your feedback will directly shape our product.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200">
-                Join Beta Program
-              </button>
-              <button className="border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors duration-200">
+              <Button onClick={handleJoinBetaClick}>
+                {isAuthenticated ? 'Go to Dashboard' : 'Join Beta Program'}
+              </Button>
+              <Button variant="outline">
                 Learn More
-              </button>
+              </Button>
             </div>
           </div>
         </motion.div>

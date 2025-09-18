@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Play } from 'lucide-react';
 import Button from '../../../components/atoms/Button';
@@ -6,9 +7,30 @@ import { useAuth, AuthModal } from '../../auth';
 
 
 const HeroSection: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const navigate = useNavigate();
   const [authModalOpen, setAuthModalOpen] = React.useState(false);
 
+  const handleJoinBetaClick = (): void => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      setAuthModalOpen(true);
+    }
+  };
+
+  const getButtonText = (): string => {
+    if (isLoading) return 'Loading...';
+    if (isAuthenticated) {
+      const firstName = user?.user_metadata?.full_name?.split(' ')[0];
+      return firstName ? `Welcome back, ${firstName}` : 'Go to Dashboard';
+    }
+    return 'Join Beta Program';
+  };
+
+  const getButtonIcon = (): React.ReactElement => {
+    return <ArrowRight className="w-5 h-5" />;
+  };
   return (
     <>
       <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50 overflow-hidden">
@@ -68,11 +90,12 @@ const HeroSection: React.FC = () => {
             >
               <Button
                 size="lg"
-                onClick={() => setAuthModalOpen(true)}
-                rightIcon={<ArrowRight className="w-5 h-5" />}
+                onClick={handleJoinBetaClick}
+                rightIcon={getButtonIcon()}
                 className="text-base sm:text-lg px-6 sm:px-8 py-3 sm:py-4"
+                disabled={isLoading}
               >
-                Join Beta Program
+                {getButtonText()}
               </Button>
               <Button
                 variant="outline"
@@ -90,18 +113,37 @@ const HeroSection: React.FC = () => {
               transition={{ duration: 0.6, delay: 0.6 }}
               className="mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start space-y-2 sm:space-y-0 sm:space-x-6 text-sm text-gray-500"
             >
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
-                Early access program
-              </div>
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
-                Shape the product
-              </div>
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
-                Beta community access
-              </div>
+              {isAuthenticated ? (
+                <>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mr-2" />
+                    Beta member since {new Date().getFullYear()}
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mr-2" />
+                    Dashboard access
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mr-2" />
+                    Community member
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+                    Early access program
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+                    Shape the product
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+                    Beta community access
+                  </div>
+                </>
+              )}
             </motion.div>
           </motion.div>
 

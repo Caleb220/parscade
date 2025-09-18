@@ -1,15 +1,27 @@
 import React, { Suspense, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Layout from '../../../components/templates/Layout';
 import HeroSection from '../sections/HeroSection';
 import FeaturesSection from '../sections/FeaturesSection';
+import { AuthModal } from '../../auth';
 import { ensureIntersectionObserver } from '../../../global/intersectionObserver';
 
 const PipelineCarousel = React.lazy(() => import('../components/PipelineCarousel'));
 
 const HomePage: React.FC = () => {
+  const location = useLocation();
+  const [authModalOpen, setAuthModalOpen] = React.useState<boolean>(false);
+
   useEffect(() => {
     ensureIntersectionObserver();
+    
+    // Check if we should open the auth modal (e.g., from ProductPage redirect)
+    if (location.state?.openAuthModal === true) {
+      setAuthModalOpen(true);
+      // Clear the state to prevent modal from opening again on subsequent visits
+      window.history.replaceState({}, document.title);
+    }
   }, []);
 
   return (
@@ -82,6 +94,12 @@ const HomePage: React.FC = () => {
           </motion.div>
         </div>
       </section>
+      
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode="signup"
+      />
     </Layout>
   );
 };

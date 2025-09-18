@@ -1,27 +1,43 @@
-// Analytics utility functions
-// This is a placeholder for analytics integration
-
 import {
   analyticsEventSchema,
   analyticsUserSchema,
   nonEmptyTextSchema,
-  type AnalyticsEvent,
-  type AnalyticsUser,
+} from '../schemas';
+import type {
+  AnalyticsEvent,
+  AnalyticsUser,
 } from '../schemas';
 import { logInfo, logWarn } from './log';
 
+/**
+ * Analytics service class for tracking user events and behavior.
+ * Provides type-safe wrappers for analytics operations with validation.
+ */
 class Analytics {
   private isInitialized = false;
 
-  init(apiKey?: string): void {
+  /**
+   * Initialize the analytics service with an API key.
+   * 
+   * @param apiKey - Optional API key for analytics service
+   */
+  init(apiKey?: string | null): void {
     if (this.isInitialized) return;
     
-    // Initialize your analytics service here
-    // Example: Google Analytics, Mixpanel, Amplitude, etc.
+    if (apiKey) {
+      // Initialize your analytics service here
+      // Example: Google Analytics, Mixpanel, Amplitude, etc.
+    }
+    
     logInfo('Analytics initialized');
     this.isInitialized = true;
   }
 
+  /**
+   * Track a user event with properties.
+   * 
+   * @param event - The event to track with name and properties
+   */
   track(event: AnalyticsEvent): void {
     if (!this.isInitialized) {
       logWarn('Analytics not initialized');
@@ -33,16 +49,20 @@ class Analytics {
       logWarn('[analytics.track] Invalid event');
       return;
     }
-    const payload = result.data;
-
-    // Track event
-    // Intentionally not logging payload contents to avoid exposing sensitive data
     
+    // The payload is validated but not used to avoid exposing sensitive data in logs
+    // const payload = result.data;
+
     // Example implementation:
     // gtag('event', event.name, event.properties);
     // mixpanel.track(event.name, event.properties);
   }
 
+  /**
+   * Identify a user for analytics tracking.
+   * 
+   * @param user - User information for identification
+   */
   identify(user: AnalyticsUser): void {
     if (!this.isInitialized) {
       logWarn('Analytics not initialized');
@@ -54,39 +74,48 @@ class Analytics {
       logWarn('[analytics.identify] Invalid user');
       return;
     }
-    const payload = userResult.data;
 
-    // Identify user
-    // Intentionally not logging payload contents to avoid exposing sensitive data
+    
+    // The payload is validated but not used to avoid exposing sensitive data in logs
+    // const payload = userResult.data;
     
     // Example implementation:
     // gtag('config', 'GA_MEASUREMENT_ID', { user_id: user.id });
     // mixpanel.identify(user.id);
   }
 
-  page(name: string, properties?: Record<string, any>): void {
+  /**
+   * Track a page view event.
+   * 
+   * @param name - Name of the page being viewed
+   * @param properties - Optional additional properties for the page view
+   */
+  page(name: string, properties?: Record<string, unknown>): void {
     if (!this.isInitialized) {
       logWarn('Analytics not initialized');
       return;
     }
 
-    // Track page view
     const nameResult = nonEmptyTextSchema('Page name', 120).safeParse(name);
     if (!nameResult.success) {
       logWarn('[analytics.page] Invalid page name');
       return;
     }
-    const pageName = nameResult.data;
-    let props: Record<string, any> | undefined = undefined;
+    
+    // Validate properties if provided
+    let validatedProps: Record<string, unknown> | undefined = undefined;
     if (analyticsEventSchema.shape.properties) {
       const propsResult = analyticsEventSchema.shape.properties.safeParse(properties);
       if (!propsResult.success) {
         logWarn('[analytics.page] Invalid properties');
       } else {
-        props = propsResult.data as any;
+        validatedProps = propsResult.data as Record<string, unknown>;
       }
     }
-    // Not logging page payload to avoid exposing sensitive data
+    
+    // The payload is validated but not used to avoid exposing sensitive data in logs
+    // const pageName = nameResult.data;
+    // Not logging page payload to avoid exposing sensitive data in logs
     
     // Example implementation:
     // gtag('config', 'GA_MEASUREMENT_ID', { page_title: name, ...properties });
@@ -96,7 +125,12 @@ class Analytics {
 
 export const analytics = new Analytics();
 
-// Common event tracking functions
+/**
+ * Track a button click event with location context.
+ * 
+ * @param buttonName - Name of the button clicked
+ * @param location - Optional location context
+ */
 export const trackButtonClick = (buttonName: string, location?: string) => {
   analytics.track({
     name: 'Button Click',
@@ -108,6 +142,11 @@ export const trackButtonClick = (buttonName: string, location?: string) => {
   });
 };
 
+/**
+ * Track a page view event.
+ * 
+ * @param pageName - Name of the page being viewed
+ */
 export const trackPageView = (pageName: string) => {
   analytics.page(pageName, {
     timestamp: new Date().toISOString(),
@@ -115,6 +154,12 @@ export const trackPageView = (pageName: string) => {
   });
 };
 
+/**
+ * Track a form submission event.
+ * 
+ * @param formName - Name of the form being submitted
+ * @param success - Whether the submission was successful
+ */
 export const trackFormSubmit = (formName: string, success: boolean) => {
   analytics.track({
     name: 'Form Submit',

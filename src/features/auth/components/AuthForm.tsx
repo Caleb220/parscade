@@ -287,7 +287,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onModeChange, onSuccess }) =>
           <div className="flex justify-end">
             <button
               type="button"
-              onClick={() => setShowResetPassword(true)}
+              onClick={() => window.location.href = '/forgot-password'}
               className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
             >
               Forgot your password?

@@ -12,8 +12,21 @@ import {
 } from 'lucide-react';
 import Layout from '../../../components/templates/Layout';
 import Button from '../../../components/atoms/Button';
+import { useAuth } from '../../auth';
+import { useNavigate } from 'react-router-dom';
 
 const ProductPage: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  const handleJoinBetaClick = (): void => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      navigate('/', { state: { openAuthModal: true } });
+    }
+  };
+
   const pipelineSteps = [
     {
       icon: FileText,
@@ -331,19 +344,17 @@ const ProductPage: React.FC = () => {
               Join our beta program and be among the first to experience next-generation document processing.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                className="bg-white text-blue-600 hover:bg-gray-50"
+              <button
+                onClick={handleJoinBetaClick}
+                className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-50 transition-colors duration-200 shadow-lg"
               >
-                Join Beta Program
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="border-white text-white hover:bg-white hover:text-blue-600"
+                {isAuthenticated ? 'Go to Dashboard' : 'Join Beta Program'}
+              </button>
+              <button
+                className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-blue-600 transition-colors duration-200"
               >
-                Request Access
-              </Button>
+                {isAuthenticated ? 'View Features' : 'Request Access'}
+              </button>
             </div>
           </motion.div>
         </div>

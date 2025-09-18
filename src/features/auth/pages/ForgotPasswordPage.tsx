@@ -1,0 +1,280 @@
+import React, { useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mail, CheckCircle, AlertCircle, ArrowLeft, Bug } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import Layout from '../../../components/templates/Layout';
+import Button from '../../../components/atoms/Button';
+import Input from '../../../components/atoms/Input';
+import { useAuth } from '../context/AuthContext';
+import { trackFormSubmit } from '../../../utils/analytics';
+import { formatErrorForUser } from '../../../utils/zodError';
+import { logWarn } from '../../../utils/log';
+
+/**
+ * Forgot Password page component for requesting password reset emails.
+ * Provides secure email-based password reset flow with rate limiting.
+ */
+const ForgotPasswordPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { resetPassword } = useAuth();
+  
+  const [email, setEmail] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSuccess, setIsSuccess] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [attempts, setAttempts] = useState<number>(0);
+  const [debugInfo, setDebugInfo] = useState<string>('');
+  const [showDebug, setShowDebug] = useState<boolean>(process.env.NODE_ENV === 'development');
+
+  /**
+   * Validate email format.
+   */
+  const validateEmail = useCallback((email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+  }, []);
+
+  /**
+   * Handle form submission with rate limiting.
+   */
+  const handleSubmit = useCallback(async (event: React.FormEvent): Promise<void> => {
+    event.preventDefault();
+    
+    // Rate limiting - max 3 attempts
+    if (attempts >= 3) {
+      setError('Too many reset requests. Please wait 15 minutes before trying again.');
+      return;
+    }
+
+    const trimmedEmail = email.trim();
+    
+    if (!trimmedEmail) {
+      setError('Email address is required.');
+      return;
+    }
+
+    if (!validateEmail(trimmedEmail)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setAttempts(prev => prev + 1);
+    setDebugInfo(`Attempting reset for: ${trimmedEmail.toLowerCase()}`);
+
+    try {
+      await resetPassword(trimmedEmail);
+      
+      // Track successful request
+      trackFormSubmit('forgot-password', true);
+      
+      setDebugInfo(prev => prev + '\n✅ Reset request sent successfully');
+      setIsSuccess(true);
+    } catch (resetError) {
+      logWarn('Forgot password: reset request failed');
+      
+      // Enhanced error logging for debugging
+      console.error('Reset password error details:', resetError);
+      setDebugInfo(prev => prev + `\n❌ Error: ${resetError instanceof Error ? resetError.message : 'Unknown error'}`);
+      
+      // Track failed request
+      trackFormSubmit('forgot-password', false);
+      
+      const errorMessage = formatErrorForUser(resetError, 'Failed to send password reset email. Please try again.');
+      setError(errorMessage);
+      setDebugInfo(prev => prev + `\n🔍 User message: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [email, attempts, resetPassword, validateEmail]);
+
+  /**
+   * Handle email input change.
+   */
+  const handleEmailChange = useCallback((event: React.ChangeEvent<HTMLInputElement>): void => {
+    setEmail(event.target.value);
+    
+    // Clear errors when user starts typing
+    if (error) {
+      setError(null);
+    }
+  }, [error]);
+
+  // Success state
+  if (isSuccess) {
+    return (
+      <Layout>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 max-w-md w-full text-center"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: 'spring' }}
+              className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6"
+            >
+              <CheckCircle className="w-8 h-8 text-green-600" />
+            </motion.div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              Check Your Email
+            </h1>
+            <p className="text-gray-600 mb-6">
+              We've sent a password reset link to <strong>{email}</strong>.
+              Please check your inbox and follow the instructions to reset your password.
+            </p>
+            <div className="space-y-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsSuccess(false);
+                  setEmail('');
+                  setAttempts(0);
+                }}
+                size="lg"
+                fullWidth
+              >
+                Send Another Email
+              </Button>
+              <Button
+                as={Link}
+                to="/"
+                variant="ghost"
+                size="lg"
+                fullWidth
+              >
+                Back to Home
+              </Button>
+            </div>
+            <p className="text-xs text-gray-500 mt-6">
+              Didn't receive the email? Check your spam folder or try again with a different email address.
+            </p>
+          </motion.div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Main forgot password form
+  return (
+    <Layout>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 w-full max-w-md"
+        >
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mail className="w-8 h-8 text-blue-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Forgot Password?
+            </h1>
+            <p className="text-gray-600">
+              No worries! Enter your email address and we'll send you a link to reset your password.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Input
+              type="email"
+              label="Email Address"
+              value={email}
+              onChange={handleEmailChange}
+              leftIcon={<Mail className="w-5 h-5" />}
+              placeholder="Enter your email address"
+              error={error}
+              required
+            />
+
+            {/* Rate Limiting Warning */}
+            {attempts >= 2 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-md"
+              >
+                <AlertCircle className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0" />
+                <span className="text-sm text-yellow-700">
+                  {attempts >= 3 ? 
+                    'Maximum attempts reached. Please wait 15 minutes.' :
+                    `${3 - attempts} attempt${3 - attempts === 1 ? '' : 's'} remaining.`
+                  }
+                </span>
+              </motion.div>
+            )}
+
+            <Button
+              type="submit"
+              fullWidth
+              size="lg"
+              isLoading={isLoading}
+              disabled={attempts >= 3}
+            >
+              {isLoading ? 'Sending Reset Link...' : 'Send Reset Link'}
+            </Button>
+          </form>
+
+          {/* Back to Sign In */}
+          <div className="mt-6 text-center">
+            <Link
+              to="/"
+              className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
+            >
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              Back to Sign In
+            </Link>
+          </div>
+
+          {/* Security Notice */}
+          <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <p className="text-xs text-gray-600">
+              <strong>Security Note:</strong> For your protection, we'll only send password reset
+              emails to registered account addresses. If you don't receive an email, the address
+              may not be associated with an account.
+            </p>
+          </div>
+
+          {/* Debug Information (Development Only) */}
+          {showDebug && debugInfo && (
+            <div className="mt-6 p-4 bg-gray-100 border border-gray-300 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700 flex items-center">
+                  <Bug className="w-4 h-4 mr-1" />
+                  Debug Info (Dev Only)
+                </span>
+                <button
+                  onClick={() => setShowDebug(false)}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                >
+                  Hide
+                </button>
+              </div>
+              <pre className="text-xs text-gray-600 whitespace-pre-wrap font-mono">
+                {debugInfo}
+              </pre>
+            </div>
+          )}
+
+          {/* Debug Toggle (Development Only) */}
+          {process.env.NODE_ENV === 'development' && !showDebug && (
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => setShowDebug(true)}
+                className="text-xs text-gray-500 hover:text-gray-700 underline"
+              >
+                Show Debug Info
+              </button>
+            </div>
+          )}
+        </motion.div>
+      </div>
+    </Layout>
+  );
+};
+
+export default ForgotPasswordPage;

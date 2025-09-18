@@ -153,7 +153,7 @@ const Navigation: React.FC = () => {
                   size="sm"
                   onClick={() => openAuthModal('signup')}
                 >
-                  Get Started
+                  Join Beta
                 </Button>
               </>
             )}
@@ -227,7 +227,7 @@ const Navigation: React.FC = () => {
                         setIsMobileMenuOpen(false);
                       }}
                     >
-                      Get Started
+                      Join Beta
                     </Button>
                   </>
                 )}

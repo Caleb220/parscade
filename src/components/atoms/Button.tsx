@@ -1,35 +1,33 @@
 import React, { ButtonHTMLAttributes, forwardRef } from 'react';
-import { motion, HTMLMotionProps } from 'framer-motion';
+import { motion } from 'framer-motion';
+import type { HTMLMotionProps } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import type { ComponentWithRef } from '../../types/common';
 
 interface BaseButtonProps {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  isLoading?: boolean;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
-  fullWidth?: boolean;
-  className?: string;
-  as?: 'button' | typeof Link;
-  to?: string;
+  readonly variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+  readonly size?: 'sm' | 'md' | 'lg' | 'xl';
+  readonly isLoading?: boolean;
+  readonly leftIcon?: React.ReactNode;
+  readonly rightIcon?: React.ReactNode;
+  readonly fullWidth?: boolean;
+  readonly className?: string;
+  readonly as?: 'button' | typeof Link;
+  readonly to?: string;
 }
 
-type ButtonProps = BaseButtonProps & 
-  (BaseButtonProps['as'] extends typeof Link 
-    ? { to: string } 
-    : Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className'>
-  );
-
 interface ButtonAsLinkProps extends BaseButtonProps {
-  as: typeof Link;
-  to: string;
+  readonly as: typeof Link;
+  readonly to: string;
 }
 
 interface ButtonAsButtonProps extends BaseButtonProps, Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'className'> {
-  as?: 'button';
+  readonly as?: 'button';
 }
 
-const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, (ButtonAsButtonProps | ButtonAsLinkProps) & HTMLMotionProps<'button'>>(
+type ButtonProps = (ButtonAsButtonProps | ButtonAsLinkProps) & HTMLMotionProps<'button'>;
+
+const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonProps>(
   (
     {
       variant = 'primary',
@@ -49,7 +47,7 @@ const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, (ButtonAsButton
   ) => {
     const baseClasses = 'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
 
-    const variantClasses = {
+    const variantClasses: Record<NonNullable<BaseButtonProps['variant']>, string> = {
       primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 shadow-sm',
       secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-500',
       outline: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500',
@@ -57,7 +55,7 @@ const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, (ButtonAsButton
       danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-sm',
     };
 
-    const sizeClasses = {
+    const sizeClasses: Record<NonNullable<BaseButtonProps['size']>, string> = {
       sm: 'px-3 py-1.5 text-sm rounded-md',
       md: 'px-4 py-2 text-sm rounded-md',
       lg: 'px-6 py-3 text-base rounded-lg',
@@ -104,6 +102,7 @@ const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, (ButtonAsButton
     );
 
     if (Component === Link && to) {
+      // Type assertion is safe here because we've checked Component === Link
       return (
         <motion.div
           whileHover={{ scale: disabled || isLoading ? 1 : 1.02 }}
@@ -113,7 +112,7 @@ const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, (ButtonAsButton
             ref={ref as React.Ref<HTMLAnchorElement>}
             to={to}
             className={classes}
-            {...(props as any)}
+            {...(props as React.ComponentProps<typeof Link>)}
           >
             {content}
           </Link>
@@ -134,7 +133,7 @@ const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, (ButtonAsButton
       </motion.button>
     );
   }
-);
+) as ComponentWithRef<ButtonProps, HTMLButtonElement | HTMLAnchorElement>;
 
 Button.displayName = 'Button';
 
