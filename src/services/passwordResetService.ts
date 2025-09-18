@@ -152,6 +152,15 @@ export const extractResetTokens = (): PasswordResetQuery | null => {
 export const establishRecoverySession = async (tokens: PasswordResetQuery): Promise<void> => {
   try {
     console.log('🔄 Establishing recovery session...');
+    console.log('🔍 Using tokens:', {
+      hasAccessToken: !!tokens.access_token,
+      hasRefreshToken: !!tokens.refresh_token,
+      tokenType: tokens.token_type,
+      type: tokens.type
+    });
+    
+    // Add a small delay to ensure signout is complete
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     const { error } = await supabase.auth.setSession({
       access_token: tokens.access_token,
@@ -159,6 +168,7 @@ export const establishRecoverySession = async (tokens: PasswordResetQuery): Prom
     });
 
     if (error) {
+      console.error('❌ SetSession error:', error);
       throw new SupabaseServiceError(
         getSessionErrorMessage(error),
         error,
@@ -169,6 +179,7 @@ export const establishRecoverySession = async (tokens: PasswordResetQuery): Prom
     // Verify the session was set correctly
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) {
+      console.error('❌ Session verification error:', sessionError);
       throw new SupabaseServiceError(
         'Session was set but could not be verified',
         sessionError,
@@ -177,9 +188,15 @@ export const establishRecoverySession = async (tokens: PasswordResetQuery): Prom
     }
     
     if (!session) {
+      console.error('❌ No session after setSession call');
       throw new Error('Failed to establish recovery session');
     }
     
+    console.log('✅ Session established:', {
+      userId: session.user?.id,
+      email: session.user?.email,
+      expiresAt: session.expires_at
+    });
     console.log('✅ Recovery session established successfully');
   } catch (err) {
     console.error('❌ Failed to establish recovery session:', err);
