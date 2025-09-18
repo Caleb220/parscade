@@ -223,6 +223,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const resetPassword = useCallback(async (email: string): Promise<void> => {
     try {
       console.log('🔄 Attempting password reset for:', email.toLowerCase());
+      console.log('🔍 Environment check:', {
+        supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
+        redirectUrl: `${window.location.origin}/reset-password`,
+        currentOrigin: window.location.origin
+      });
       
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
         redirectTo: `${window.location.origin}/reset-password`,
@@ -230,12 +235,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (error) {
         console.error('❌ Supabase reset password error:', error);
+        console.error('❌ Error details:', {
+          name: error.name,
+          message: error.message,
+          status: 'status' in error ? error.status : 'N/A',
+          code: 'code' in error ? error.code : 'N/A',
+          details: 'details' in error ? error.details : 'N/A'
+        });
         throw new Error(getPasswordResetErrorMessage(error));
       }
       
       console.log('✅ Password reset email request completed successfully');
     } catch (resetError) {
       console.error('❌ Reset password function error:', resetError);
+      console.error('❌ Complete error object:', resetError);
       const message = resetError instanceof Error 
         ? resetError.message 
         : 'Failed to send reset email. Please try again.';
@@ -285,15 +298,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
  * @returns User-friendly error message
  */
 const getPasswordResetErrorMessage = (error: AuthError | AuthApiError): string => {
+  console.log('🔍 Analyzing error:', { 
+    name: error.name, 
+    message: error.message,
+    status: 'status' in error ? error.status : 'N/A'
+  });
+  
   // Handle different error types
   if ('status' in error && error.status) {
     switch (error.status) {
+      case 500:
+        return 'Email service configuration error. Please check your Supabase email settings or contact support.';
       case 429:
         return 'Too many password reset requests. Please wait a few minutes before trying again.';
       case 422:
         return 'Invalid email address format. Please check and try again.';
       case 400:
         return 'Unable to send password reset email. Please verify your email address.';
+      case 404:
+        return 'Email service not configured. Please contact support.';
       default:
         break;
     }
@@ -301,6 +324,14 @@ const getPasswordResetErrorMessage = (error: AuthError | AuthApiError): string =
 
   // Handle specific error messages
   const message = error.message?.toLowerCase() || '';
+  
+  if (message.includes('internal server error') || message.includes('500')) {
+    return 'Email service is currently unavailable. Please check your Supabase configuration or try again later.';
+  }
+  
+  if (message.includes('smtp') || message.includes('email service')) {
+    return 'Email service configuration error. Please check your Supabase SMTP settings.';
+  }
   
   if (message.includes('rate limit')) {
     return 'Too many password reset requests. Please wait 5 minutes before trying again.';
@@ -318,12 +349,9 @@ const getPasswordResetErrorMessage = (error: AuthError | AuthApiError): string =
     return 'Please enter a valid email address.';
   }
   
-  if (message.includes('smtp') || message.includes('email')) {
-    return 'Unable to send password reset email. Please try again or contact support.';
-  }
 
   // Generic fallback
-  return 'Unable to send password reset email. Please try again or contact support if the problem persists.';
+  return `Email service error: ${error.message || 'Please check your Supabase configuration or contact support.'}`;
 };
 
 /**
