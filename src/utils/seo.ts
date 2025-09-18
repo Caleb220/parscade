@@ -1,13 +1,13 @@
-interface SEOConfig {
-  title: string;
-  description: string;
-  keywords?: string[];
-  image?: string;
-  url?: string;
-  type?: 'website' | 'article';
-}
+import { seoConfigSchema, type SeoConfig } from '../schemas';
+import { logWarn } from './log';
 
-export const updateSEO = (config: SEOConfig): void => {
+export const updateSEO = (configInput: SeoConfig): void => {
+  const parsed = seoConfigSchema.safeParse(configInput);
+  if (!parsed.success) {
+    logWarn('[seo] Invalid SEO config');
+    return;
+  }
+  const config = parsed.data;
   // Update title
   document.title = config.title;
 
@@ -35,7 +35,7 @@ export const updateSEO = (config: SEOConfig): void => {
   // Open Graph tags
   updateMetaTag('og:title', config.title, true);
   updateMetaTag('og:description', config.description, true);
-  updateMetaTag('og:type', config.type || 'website', true);
+  updateMetaTag('og:type', config.type, true);
   
   if (config.image) {
     updateMetaTag('og:image', config.image, true);
@@ -55,7 +55,7 @@ export const updateSEO = (config: SEOConfig): void => {
   }
 };
 
-export const defaultSEO: SEOConfig = {
+export const defaultSEO: SeoConfig = seoConfigSchema.parse({
   title: 'Parscade',
   description: 'Join our beta program and help build the future of document processing. Intelligent parsing platform designed for enterprise-grade accuracy and speed.',
   keywords: [
@@ -71,4 +71,5 @@ export const defaultSEO: SEOConfig = {
   ],
   image: '/main-logo.png',
   type: 'website'
-};
+});
+

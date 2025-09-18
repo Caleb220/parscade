@@ -1,6 +1,8 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import Button from '../atoms/Button';
+import { isZodError, extractZodMessages } from '../../utils/zodError';
+import { logError } from '../../utils/log';
 
 interface Props {
   children: ReactNode;
@@ -22,11 +24,10 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo);
-    
-    // Here you would typically log to your error reporting service
-    // Example: Sentry.captureException(error, { contexts: { errorInfo } });
+  componentDidCatch(error: Error, _errorInfo: ErrorInfo) {
+    // Avoid dumping sensitive details to the console; emit a minimal dev-only log
+    logError('An unexpected error was caught by ErrorBoundary');
+    // Hook up your error reporting service here (Sentry, etc.) with redacted metadata
   }
 
   handleReset = () => {
@@ -51,7 +52,7 @@ class ErrorBoundary extends Component<Props, State> {
             </h1>
             
             <p className="text-gray-600 mb-6">
-              We're sorry, but something unexpected happened. Please try refreshing the page or contact support if the problem persists.
+              We're sorry, but something unexpected happened.
             </p>
 
             {process.env.NODE_ENV === 'development' && this.state.error && (

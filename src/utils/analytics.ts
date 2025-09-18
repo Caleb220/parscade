@@ -1,17 +1,14 @@
 // Analytics utility functions
 // This is a placeholder for analytics integration
 
-interface AnalyticsEvent {
-  name: string;
-  properties?: Record<string, any>;
-}
-
-interface AnalyticsUser {
-  id: string;
-  email?: string;
-  name?: string;
-  [key: string]: any;
-}
+import {
+  analyticsEventSchema,
+  analyticsUserSchema,
+  nonEmptyTextSchema,
+  type AnalyticsEvent,
+  type AnalyticsUser,
+} from '../schemas';
+import { logInfo, logWarn } from './log';
 
 class Analytics {
   private isInitialized = false;
@@ -21,18 +18,25 @@ class Analytics {
     
     // Initialize your analytics service here
     // Example: Google Analytics, Mixpanel, Amplitude, etc.
-    console.log('Analytics initialized with key:', apiKey);
+    logInfo('Analytics initialized');
     this.isInitialized = true;
   }
 
   track(event: AnalyticsEvent): void {
     if (!this.isInitialized) {
-      console.warn('Analytics not initialized');
+      logWarn('Analytics not initialized');
       return;
     }
 
+    const result = analyticsEventSchema.safeParse(event);
+    if (!result.success) {
+      logWarn('[analytics.track] Invalid event');
+      return;
+    }
+    const payload = result.data;
+
     // Track event
-    console.log('Analytics event:', event);
+    // Intentionally not logging payload contents to avoid exposing sensitive data
     
     // Example implementation:
     // gtag('event', event.name, event.properties);
@@ -41,12 +45,19 @@ class Analytics {
 
   identify(user: AnalyticsUser): void {
     if (!this.isInitialized) {
-      console.warn('Analytics not initialized');
+      logWarn('Analytics not initialized');
       return;
     }
 
+    const userResult = analyticsUserSchema.safeParse(user);
+    if (!userResult.success) {
+      logWarn('[analytics.identify] Invalid user');
+      return;
+    }
+    const payload = userResult.data;
+
     // Identify user
-    console.log('Analytics identify:', user);
+    // Intentionally not logging payload contents to avoid exposing sensitive data
     
     // Example implementation:
     // gtag('config', 'GA_MEASUREMENT_ID', { user_id: user.id });
@@ -55,12 +66,27 @@ class Analytics {
 
   page(name: string, properties?: Record<string, any>): void {
     if (!this.isInitialized) {
-      console.warn('Analytics not initialized');
+      logWarn('Analytics not initialized');
       return;
     }
 
     // Track page view
-    console.log('Analytics page:', name, properties);
+    const nameResult = nonEmptyTextSchema('Page name', 120).safeParse(name);
+    if (!nameResult.success) {
+      logWarn('[analytics.page] Invalid page name');
+      return;
+    }
+    const pageName = nameResult.data;
+    let props: Record<string, any> | undefined = undefined;
+    if (analyticsEventSchema.shape.properties) {
+      const propsResult = analyticsEventSchema.shape.properties.safeParse(properties);
+      if (!propsResult.success) {
+        logWarn('[analytics.page] Invalid properties');
+      } else {
+        props = propsResult.data as any;
+      }
+    }
+    // Not logging page payload to avoid exposing sensitive data
     
     // Example implementation:
     // gtag('config', 'GA_MEASUREMENT_ID', { page_title: name, ...properties });
@@ -99,3 +125,4 @@ export const trackFormSubmit = (formName: string, success: boolean) => {
     },
   });
 };
+

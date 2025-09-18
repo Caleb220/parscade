@@ -1,38 +1,29 @@
-// Core application types
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: 'admin' | 'user';
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { z } from 'zod';
 
-export interface AuthState {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-}
+import {
+  coreAuthStateSchema,
+  createApiResponseSchema,
+  pipelineStepSchema,
+  routeConfigSchema,
+  userSchema,
+  type CoreAuthState,
+  type PipelineStep,
+  type User,
+} from '../schemas/core';
 
-export interface ApiResponse<T> {
-  data: T;
-  success: boolean;
-  message?: string;
-  errors?: string[];
-}
+export {
+  coreAuthStateSchema,
+  createApiResponseSchema,
+  pipelineStepSchema,
+  routeConfigSchema,
+  userSchema,
+};
 
-export interface PipelineStep {
-  id: string;
-  title: string;
-  shortTitle?: string;
-  description: string;
-  icon: string;
-  status: 'pending' | 'processing' | 'completed' | 'error';
-}
+export type { CoreAuthState as AuthState, PipelineStep, User };
 
-export interface RouteConfig {
-  path: string;
-  element: React.ComponentType;
-  title: string;
-  description?: string;
-}
+export type RouteConfig = z.infer<typeof routeConfigSchema>;
+
+export type ApiResponseSchema<TSchema extends z.ZodTypeAny> = ReturnType<typeof createApiResponseSchema<TSchema>>;
+
+export type ApiResponse<TSchema extends z.ZodTypeAny> = z.infer<ApiResponseSchema<TSchema>>;
+

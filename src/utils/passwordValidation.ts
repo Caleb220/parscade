@@ -1,4 +1,4 @@
-import { PasswordStrength } from '../types/auth';
+import { passwordStrengthSchema, type PasswordStrength } from '../schemas';
 
 export const validatePassword = (password: string): PasswordStrength => {
   const feedback: string[] = [];
@@ -52,11 +52,11 @@ export const validatePassword = (password: string): PasswordStrength => {
 
   const isValid = score >= 5 && feedback.length === 0;
 
-  return {
+  return passwordStrengthSchema.parse({
     score: Math.min(score, 5),
     feedback,
     isValid,
-  };
+  });
 };
 
 export const getPasswordStrengthLabel = (score: number): string => {
