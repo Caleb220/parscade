@@ -134,7 +134,12 @@ class PinoLogger {
 
   private async setupAdvancedLogger(): Promise<void> {
     try {
-      // Only import pino-elasticsearch in Node.js environments
+      // Only import pino-elasticsearch in Node.js environments (SSR)
+      if (!import.meta.env.SSR) {
+        console.warn('[Logger] Skipping Elasticsearch setup in browser environment');
+        return;
+      }
+      
       const pinoElastic = await import('pino-elasticsearch');
       
       const elasticUrl = import.meta.env?.VITE_ELASTIC_URL || 

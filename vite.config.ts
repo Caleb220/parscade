@@ -11,9 +11,5 @@ export default defineConfig({
     global: 'globalThis',
   },
   resolve: {
-    alias: {
-      // Provide browser-compatible alternatives for Node.js modules
-      'pino-elasticsearch': false,
-    },
   },
 });
