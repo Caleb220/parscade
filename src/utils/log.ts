@@ -1,9 +1,6 @@
 /**
- * Legacy logging utilities - now redirecting to centralized logger.
- * This file maintains backward compatibility while routing to Sentry.
+ * Simple logging utilities using console.
  */
-
-import { logger } from '../services/logger';
 
 /**
  * Determines if the application is running in production mode.
@@ -14,24 +11,21 @@ export const isProduction =
 
 /**
  * Logs an info message.
- * @deprecated Use logger.info() instead
  */
 export const logInfo = (message: string): void => {
-  logger.info(message);
+  console.info(`[INFO] ${message}`);
 };
 
 /**
  * Logs a warning message.
- * @deprecated Use logger.warn() instead
  */
 export const logWarn = (message: string): void => {
-  logger.warn(message);
+  console.warn(`[WARN] ${message}`);
 };
 
 /**
  * Logs an error message.
- * @deprecated Use logger.error() instead
  */
 export const logError = (message: string): void => {
-  logger.error(message);
+  console.error(`[ERROR] ${message}`);
 };
